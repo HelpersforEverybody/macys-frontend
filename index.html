@@ -93,7 +93,8 @@
   .col-url{max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1ea7ff}
   .col-color{width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .col-size{width:90px;white-space:nowrap}
-  .col-price{width:110px;white-space:nowrap;font-weight:normal}
+  /* <<< changed: make current price bold as requested >>> */
+  .col-price{width:110px;white-space:nowrap;font-weight:800}
   .col-regular{width:110px;white-space:nowrap}
   .col-avail{width:120px;white-space:nowrap}
 
@@ -111,9 +112,9 @@
 
   /* URL link styling with truncation */
   .url-cell { max-width:180px; }
-  .url-cell a { 
-    color: #1ea7ff; 
-    text-decoration: none; 
+  .url-cell a {
+    color: #1ea7ff;
+    text-decoration: none;
     display:block;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -121,6 +122,17 @@
     max-width: 100%;
   }
   .url-cell a:hover { text-decoration:underline; }
+
+  /* small counter badge for URL count (inline) */
+  .url-counter {
+    background: rgba(0,0,0,0.06);
+    color: var(--muted);
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:700;
+    margin-left:8px;
+  }
+  :root[data-theme="light"] .url-counter { background: rgba(0,0,0,0.04); color:var(--muted); }
 </style>
 </head>
 <body>
@@ -157,6 +169,12 @@
         <div class="chip" id="queueInfo">Queue: 0</div>
         <div class="chip" id="posInfo">Position: -</div>
         <div class="chip" id="itemsInfo">Items: -</div>
+
+        <!-- <<< added: URL counter (updates live) >>> -->
+        <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+          <div style="color:var(--muted);font-size:13px">URLs:</div>
+          <div class="url-counter" id="urlCount">0</div>
+        </div>
       </div>
 
       <div id="resultsArea" class="table-wrap" style="display:none">
@@ -190,6 +208,7 @@
   const resultsTable = document.getElementById('resultsTable');
   const rowsInfo = document.getElementById('rowsInfo');
   const themeSwitch = document.getElementById('themeSwitch');
+  const urlCountEl = document.getElementById('urlCount'); // <<< new
 
   function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
   function setStatus(t){ statusEl.innerText = t; }
@@ -198,7 +217,6 @@
   (function initTheme(){
     const saved = localStorage.getItem('extractor_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', saved);
-    // reflect switch UI
     if(saved === 'light'){ themeSwitch.classList.add('on'); themeSwitch.setAttribute('aria-checked','true'); themeSwitch.querySelector('.knob').style.transform = 'translateX(24px)'; }
   })();
 
@@ -229,28 +247,22 @@
     });
   }
 
-  // Function to truncate URL for display
+  // Function to truncate URL for display (kept same behavior)
   function truncateUrl(url, maxLength = 40) {
     if (!url || url.length <= maxLength) return url;
-    
-    // Keep the domain and truncate the path
     try {
       const urlObj = new URL(url);
       const domain = urlObj.hostname;
       const path = urlObj.pathname + urlObj.search;
-      
       if (domain.length + 10 >= maxLength) {
         return domain.substring(0, maxLength - 3) + '...';
       }
-      
-      const availableForPath = maxLength - domain.length - 3; // -3 for the ellipsis
+      const availableForPath = maxLength - domain.length - 3;
       if (path.length > availableForPath) {
         return domain + path.substring(0, availableForPath) + '...';
       }
-      
       return domain + path;
     } catch (e) {
-      // If URL parsing fails, fall back to simple truncation
       return url.length > maxLength ? url.substring(0, maxLength - 3) + '...' : url;
     }
   }
@@ -388,14 +400,24 @@
     }
   }
 
+  // <<< NEW: URL counter update logic >>>
+  function updateUrlCount(){
+    const raw = urlsInput.value || '';
+    const count = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length;
+    urlCountEl.textContent = count;
+  }
+  urlsInput.addEventListener('input', updateUrlCount);
+  // call once on load
+  updateUrlCount();
+
   // UI wiring
   submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
-  clearBtn.addEventListener('click', ()=> { urlsInput.value=''; resultsArea.style.display='none'; resultsTable.innerHTML=''; downloadBtn.style.display='none'; rowsInfo.innerText='Showing: 0 rows'; });
+  clearBtn.addEventListener('click', ()=> { urlsInput.value=''; resultsArea.style.display='none'; resultsTable.innerHTML=''; downloadBtn.style.display='none'; rowsInfo.innerText='Showing: 0 rows'; updateUrlCount(); });
 
   function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
 
   // expose for debug
-  window.__EXTRACTOR = { renderTableFromCsv, submitToQueue, connectSocket, truncateUrl };
+  window.__EXTRACTOR = { renderTableFromCsv, submitToQueue, connectSocket, truncateUrl: null };
 </script>
 </body>
 </html>

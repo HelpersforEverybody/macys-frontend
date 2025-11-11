@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Extractor — UI refinements</title>
+<title>Extractor — UI refinements + Progress</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
   :root{
@@ -133,16 +133,23 @@
   }
   :root[data-theme="light"] .url-counter { background: rgba(0,0,0,0.04); color:var(--muted); }
 
-  /* ===== Circular progress styles ===== */
-  .progress-wrap { display:flex; align-items:center; gap:8px; margin-left:6px; }
-  .progress-circle { width:48px; height:48px; display:inline-block; opacity:1; transition:opacity .18s ease; }
-  .progress-circle .circular { width:100%; height:100%; transform:rotate(-90deg); overflow:visible; }
-  .progress-circle .bg { fill:none; stroke: rgba(255,255,255,0.06); stroke-width:3.5; }
-  .progress-circle .progress { fill:none; stroke: #10b981; stroke-width:3.5; stroke-linecap:round; transition: stroke-dasharray 400ms ease, stroke 200ms; }
-  :root[data-theme="light"] .progress-circle .bg { stroke: rgba(0,0,0,0.06); }
-  :root[data-theme="light"] .progress-circle .progress { stroke: #0ea5a4; } /* teal in light mode */
-  .progress-circle .percentage { font-size:8px; text-anchor:middle; fill:var(--text); transform:rotate(90deg); }
-  .progress-label { font-size:12px; color:var(--muted); min-width:56px; text-align:left; }
+  /* Circular progress box */
+  .progress-wrap { display:flex; align-items:center; gap:12px; margin-left:12px; }
+  .circle {
+    width:72px; height:72px; position:relative;
+    display:inline-block;
+  }
+  .circle svg { transform: rotate(-90deg); width:100%; height:100%; display:block; }
+  .circle .bg { stroke: rgba(255,255,255,0.06); stroke-width:8; fill:none; }
+  .circle .bar { stroke: var(--green); stroke-width:8; stroke-linecap:round; fill:none; transition: stroke-dashoffset 400ms linear; }
+  .circle .percent { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text); font-size:14px; pointer-events:none; }
+  .progress-label { font-size:13px; color:var(--muted); }
+
+  /* make small on narrow screens */
+  @media(max-width:700px){
+    .circle{ width:58px; height:58px; }
+    .circle .percent { font-size:12px; }
+  }
 </style>
 </head>
 <body>
@@ -173,23 +180,23 @@
         <a id="downloadBtn" class="btn btn-download" style="display:none" download>Download CSV</a>
         <button id="clearBtn" class="btn btn-ghost">Clear</button>
 
-        <!-- Circular progress (added) -->
-        <div class="progress-wrap" id="progressWrap" aria-hidden="true" style="margin-left:6px">
-          <div class="progress-circle" id="extractProgress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="Extraction progress">
-            <svg viewBox="0 0 36 36" class="circular">
-              <path class="bg" d="M18 2.0845
-                  a 15.9155 15.9155 0 0 1 0 31.831
-                  a 15.9155 15.9155 0 0 1 0 -31.831"/>
-              <path id="progressCircle" class="progress" stroke-dasharray="0,100" d="M18 2.0845
-                  a 15.9155 15.9155 0 0 1 0 31.831
-                  a 15.9155 15.9155 0 0 1 0 -31.831"/>
-              <text x="18" y="20.35" class="percentage" id="progressText">0%</text>
-            </svg>
-          </div>
-          <div class="progress-label" id="progressLabel">Idle</div>
-        </div>
+        <!-- progress area: status + circle -->
+        <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+          <div class="status" id="status">Not connected</div>
 
-        <div class="status" id="status">Not connected</div>
+          <div class="progress-wrap" id="progressWrap" aria-hidden="true" style="display:none">
+            <div class="circle" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressCircle">
+              <svg viewBox="0 0 100 100">
+                <circle class="bg" cx="50" cy="50" r="40"></circle>
+                <circle class="bar" cx="50" cy="50" r="40" stroke-dasharray="251.2" stroke-dashoffset="251.2"></circle>
+              </svg>
+              <div class="percent" id="progressText">0%</div>
+            </div>
+            <div>
+              <div class="progress-label" id="progressLabel">Idle</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="meta">
@@ -197,7 +204,7 @@
         <div class="chip" id="posInfo">Position: -</div>
         <div class="chip" id="itemsInfo">Items: -</div>
 
-        <!-- <<< added: URL counter (updates live) >>> -->
+        <!-- URL counter -->
         <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
           <div style="color:var(--muted);font-size:13px">URLs:</div>
           <div class="url-counter" id="urlCount">0</div>
@@ -235,13 +242,17 @@
   const resultsTable = document.getElementById('resultsTable');
   const rowsInfo = document.getElementById('rowsInfo');
   const themeSwitch = document.getElementById('themeSwitch');
-  const urlCountEl = document.getElementById('urlCount'); // <<< new
+  const urlCountEl = document.getElementById('urlCount');
 
-  // Progress controls
+  // progress elements
   const progressWrap = document.getElementById('progressWrap');
-  const progressCircle = document.getElementById('progressCircle');
+  const progressBar = document.querySelector('.circle .bar');
   const progressText = document.getElementById('progressText');
   const progressLabel = document.getElementById('progressLabel');
+  const CIRCLE_R = 40;
+  const CIRCLE_CIRC = Math.PI * 2 * CIRCLE_R; // circumference
+  progressBar.style.strokeDasharray = CIRCLE_CIRC;
+  progressBar.style.strokeDashoffset = CIRCLE_CIRC;
 
   function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
   function setStatus(t){ statusEl.innerText = t; }
@@ -280,7 +291,7 @@
     });
   }
 
-  // Function to truncate URL for display (kept same behavior)
+  // Function to truncate URL for display
   function truncateUrl(url, maxLength = 40) {
     if (!url || url.length <= maxLength) return url;
     try {
@@ -372,6 +383,59 @@
     resultsArea.scrollLeft = 0;
   }
 
+  // === Progress animation (client-only, non-blocking) ===
+  let progressInterval = null;
+  let progressValue = 0;
+
+  function showProgressUI(show){
+    progressWrap.style.display = show ? 'flex' : 'none';
+    progressWrap.setAttribute('aria-hidden', show ? 'false' : 'true');
+  }
+
+  function setProgress(n){
+    // n: 0-100
+    if(n < 0) n = 0;
+    if(n > 100) n = 100;
+    progressValue = n;
+    const offset = CIRCLE_CIRC * (1 - (n / 100));
+    progressBar.style.strokeDashoffset = offset;
+    progressText.innerText = Math.round(n) + '%';
+    document.getElementById('progressCircle').setAttribute('aria-valuenow', String(Math.round(n)));
+  }
+
+  function startProgressAuto(){
+    // show UI and begin a gentle increment up to 95% (will be completed by extraction_complete)
+    showProgressUI(true);
+    setProgress(0);
+    progressLabel.innerText = 'Extracting';
+    clearInterval(progressInterval);
+    progressInterval = setInterval(()=> {
+      // increase by small random amount, slower as it approaches 95
+      if(progressValue >= 95){
+        clearInterval(progressInterval);
+        return;
+      }
+      // variable step to feel natural
+      const step = 0.5 + Math.random() * (1.5 * (1 - progressValue/100));
+      setProgress(Math.min(95, progressValue + step));
+    }, 350);
+  }
+
+  function completeProgress(){
+    clearInterval(progressInterval);
+    setProgress(100);
+    progressLabel.innerText = 'Complete';
+    // keep visible for a moment then hide (optional)
+    setTimeout(()=> showProgressUI(false), 1800);
+  }
+
+  function resetProgress(){
+    clearInterval(progressInterval);
+    setProgress(0);
+    progressLabel.innerText = 'Idle';
+    showProgressUI(false);
+  }
+
   // socket + CSV behavior (unchanged API)
   let socket = null;
   function connectSocket(){
@@ -384,12 +448,16 @@
     socket.on('connect', ()=> { setStatus('Ready'); console.log('socket connected', socket.id); });
     socket.on('connect_error', err => { console.warn('connect_error', err); setStatus('Socket error'); });
     socket.on('queue_update', payload => {
-      setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
+      // if server uses message to tell extracting, start progress
+      const msg = payload.message || '';
+      setStatus(msg || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
       queueInfo.innerText = `Queue: ${payload.total || 0}`;
       posInfo.innerText = `Position: ${payload.position || '-'}`;
-      // if server indicates extracting in message, start progress
-      if (payload.message && /extracting/i.test(payload.message)) {
-        startSimulatedProgress(92);
+
+      // If server says extracting or your UI should, kick off progress
+      const lower = (msg || '').toString().toLowerCase();
+      if(lower.includes('extract') || lower.includes('extracting') || lower.includes('your turn - extracting')){
+        startProgressAuto();
       }
     });
 
@@ -399,6 +467,10 @@
       downloadBtn.href = full; downloadBtn.style.display = 'inline-block';
       setStatus('Extraction complete — fetching preview...');
       itemsInfo.innerText = `Items: ${data.totalItems || '-'}`;
+
+      // Complete progress immediately
+      completeProgress();
+
       try {
         const res = await fetch(full);
         if(!res.ok) throw new Error('CSV fetch returned ' + res.status);
@@ -409,8 +481,6 @@
         console.error('CSV fetch failed', err);
         setStatus('Extraction complete — click Download to save file');
       }
-      // ensure progress finishes to 100% when completion arrives
-      finishProgress();
     });
   }
   connectSocket();
@@ -432,6 +502,9 @@
       setStatus(json.message || 'Submitted — waiting in queue');
       const userId = json.userId || json.id || json.room;
       if(userId) socket.emit('join_queue', userId);
+
+      // start client-side progress visualization while extraction runs
+      startProgressAuto();
     } catch(err){
       console.error('Submit error', err);
       alert('Submit failed: ' + (err.message || err));
@@ -439,122 +512,29 @@
     }
   }
 
-  // <<< NEW: URL counter update logic >>>
+  // URL counter update logic
   function updateUrlCount(){
     const raw = urlsInput.value || '';
     const count = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length;
     urlCountEl.textContent = count;
   }
   urlsInput.addEventListener('input', updateUrlCount);
-  // call once on load
   updateUrlCount();
 
   // UI wiring
- submitBtn.removeEventListener && submitBtn.removeEventListener('click', submitButtonHandler, false); // safe no-op if not used
-
-function submitButtonHandler(e){
-  e.preventDefault();
-  // show progress immediately
-  if (progressWrap) {
-    progressWrap.style.opacity = '1';
-    progressWrap.setAttribute('aria-hidden','false');
-  }
-  // start simulated client-side progress (will cap around 92% until server finish)
-  if (typeof startSimulatedProgress === 'function') startSimulatedProgress(92);
-  // then proceed with original submit
-  submitToQueue();
-}
-submitBtn.addEventListener('click', submitButtonHandler);
-
-  clearBtn.addEventListener('click', ()=> { urlsInput.value=''; resultsArea.style.display='none'; resultsTable.innerHTML=''; downloadBtn.style.display='none'; rowsInfo.innerText='Showing: 0 rows'; updateUrlCount(); });
+  submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
+  clearBtn.addEventListener('click', ()=> {
+    urlsInput.value=''; resultsArea.style.display='none'; resultsTable.innerHTML=''; downloadBtn.style.display='none';
+    rowsInfo.innerText='Showing: 0 rows'; updateUrlCount(); resetProgress();
+  });
 
   function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
 
-  // ========== Circular progress logic ==========
-  let progressInterval = null;
-  let simulatedProgress = 0;
-  let extractingState = false;
-
-  function setProgress(percent){
-    percent = Math.max(0, Math.min(100, Math.round(percent)));
-    const dash = `${percent} ${100 - percent}`;
-    if (progressCircle) progressCircle.setAttribute('stroke-dasharray', dash);
-    if (progressText) progressText.textContent = percent + '%';
-    if (progressWrap) {
-      progressWrap.style.opacity = (percent === 0 && !extractingState) ? '0' : '1';
-      progressWrap.setAttribute('aria-hidden', (percent === 0 && !extractingState) ? 'true' : 'false');
-    }
-    if (document.getElementById('extractProgress')) document.getElementById('extractProgress').setAttribute('aria-valuenow', String(percent));
-    if (progressLabel) {
-      if (percent === 0 && !extractingState) progressLabel.innerText = 'Idle';
-      else if (percent < 100) progressLabel.innerText = 'Extracting';
-      else progressLabel.innerText = 'Complete';
-    }
-  }
-
-  function startSimulatedProgress(upTo = 95){
-    if (!progressWrap) return;
-    clearInterval(progressInterval);
-    extractingState = true;
-    simulatedProgress = 0;
-    setProgress(0);
-    progressWrap.style.transition = 'opacity 200ms';
-    progressWrap.style.opacity = '1';
-    progressWrap.setAttribute('aria-hidden','false');
-
-    progressInterval = setInterval(() => {
-      const step = 1 + Math.floor(Math.random() * 3); // 1..3%
-      simulatedProgress = Math.min(upTo, simulatedProgress + step);
-      setProgress(simulatedProgress);
-      if (simulatedProgress >= upTo) {
-        clearInterval(progressInterval);
-        // small nudges to keep it alive near cap until finish
-        progressInterval = setInterval(() => {
-          const nudge = Math.random() < 0.25 ? 1 : 0;
-          simulatedProgress = Math.min(upTo, simulatedProgress + nudge);
-          setProgress(simulatedProgress);
-        }, 900);
-      }
-    }, 400);
-  }
-
-  function finishProgress(){
-    extractingState = false;
-    clearInterval(progressInterval);
-    setProgress(100);
-    // keep visible briefly then reset
-    setTimeout(() => {
-      setTimeout(() => {
-        setProgress(0);
-        if (progressWrap) progressWrap.style.opacity = '0.0';
-      }, 900);
-    }, 600);
-  }
-
-  // ensure we attach a second listener if needed (connectSocket already attaches main handler)
-  function attachProgressToSocketOnce(){
-    if (!socket || socket.__progressAttached) return;
-    socket.__progressAttached = true;
-    socket.on('extraction_complete', (data) => {
-      finishProgress();
-    });
-    // If server emits status messages, queue_update handler already starts progress when message contains "extracting"
-  }
-  setTimeout(attachProgressToSocketOnce, 400);
-  // also attach on connect
-  (function attachOnConnect(){
-    const check = setInterval(()=> {
-      if (socket && socket.on) {
-        socket.on('connect', attachProgressToSocketOnce);
-        clearInterval(check);
-      }
-    }, 300);
-  })();
-
   // expose for debug
-  window.__EXTRACTOR = { renderTableFromCsv, submitToQueue, connectSocket, truncateUrl: null, startSimulatedProgress, finishProgress };
+  window.__EXTRACTOR = { renderTableFromCsv, submitToQueue, connectSocket, setProgress, startProgressAuto, completeProgress };
 
+  // init: hide progress
+  resetProgress();
 </script>
 </body>
 </html>
-

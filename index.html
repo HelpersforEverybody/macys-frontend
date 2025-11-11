@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Extractor — UI refinements</title>
+<title>Extractor — UI refinements (resizable URL column)</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
   :root{
@@ -18,15 +18,17 @@
     font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
   }
 
-  /* themes */
+  /* theme vars */
   :root[data-theme="dark"]{
     --page-bg:#07111a;
-    --card-bg: rgba(255,255,255,0.02);
+    --card-bg: #0b1116;            /* opaque darker card */
     --text:#eaf6ff;
     --muted:var(--muted-dark);
-    --input-bg:rgba(255,255,255,0.01);
+    --input-bg:#07161d;
     --btn-text:#fff;
-    --header-shadow: rgba(0,0,0,0.6);
+    --thead-bg: #0b1116;           /* header background (opaque) */
+    --thead-shadow: rgba(0,0,0,0.7);
+    --scroll-thumb: rgba(255,255,255,0.12);
   }
   :root[data-theme="light"]{
     --page-bg:#f3f7fb;
@@ -35,7 +37,9 @@
     --muted:var(--muted-light);
     --input-bg:#ffffff;
     --btn-text:#fff;
-    --header-shadow: rgba(0,0,0,0.06);
+    --thead-bg: #ffffff;
+    --thead-shadow: rgba(0,0,0,0.06);
+    --scroll-thumb: rgba(0,0,0,0.18);
   }
 
   html,body{height:100%;margin:0;overflow-x:hidden;background:var(--page-bg);color:var(--text);-webkit-font-smoothing:antialiased}
@@ -60,25 +64,33 @@
   .chip{background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:999px;color:var(--muted);font-size:13px;border:1px solid rgba(255,255,255,0.02)}
 
   /* results viewport */
-  .table-wrap{margin-top:18px;border-radius:12px;background:var(--card-bg);border:1px solid var(--card-border);max-height:520px;padding:0;overflow:auto}
+  .table-wrap{margin-top:18px;border-radius:12px;background:var(--card-bg);border:1px solid var(--card-border);max-height:540px;padding:0;overflow:auto}
   .table-top{padding:8px 12px; display:flex; justify-content:space-between; align-items:center;}
   .table-top .muted{color:var(--muted);font-size:13px}
 
   /* scrollbar styles (visible) */
-  .table-wrap{ scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.25) rgba(255,255,255,0.02); }
+  .table-wrap{ scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) rgba(255,255,255,0.02); }
   .table-wrap::-webkit-scrollbar{ height:12px; width:12px; }
   .table-wrap::-webkit-scrollbar-track{ background: rgba(255,255,255,0.02); border-radius:6px; }
-  .table-wrap::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.25); border-radius:6px; border:2px solid rgba(0,0,0,0); }
+  .table-wrap::-webkit-scrollbar-thumb{ background: var(--scroll-thumb); border-radius:6px; border:2px solid rgba(0,0,0,0); }
 
-  table{width:100%;border-collapse:collapse;min-width:1100px;table-layout:auto}
+  table{width:100%;border-collapse:collapse;min-width:900px;table-layout:auto}
   thead th{
-    position:sticky; top:0; z-index:6;
-    background: var(--card-bg); /* opaque so nothing shows through */
+    position:sticky; top:0; z-index:9;
+    background: var(--thead-bg); /* opaque header, different per theme */
     padding:12px 14px; color:var(--muted); font-size:12px; text-transform:uppercase;
     border-bottom:1px solid rgba(0,0,0,0.06);
-    font-weight:700; /* bold header */
-    box-shadow: 0 2px 6px var(--header-shadow); /* ensures header stands above content */
+    font-weight:800; /* bold header */
+    box-shadow: 0 2px 6px var(--thead-shadow); /* header stands above content */
+    display:flex; align-items:center; gap:8px;
   }
+
+  /* resizer handle */
+  .resizer { width:10px; height:28px; cursor:col-resize; display:inline-block; margin-left:auto; border-radius:3px; opacity:0.6; }
+  .resizer:hover{ opacity:1; background: rgba(0,0,0,0.06); }
+  :root[data-theme="dark"] .resizer{ background: rgba(255,255,255,0.02); }
+  :root[data-theme="light"] .resizer{ background: rgba(0,0,0,0.04); }
+
   tbody td{padding:12px 14px;border-bottom:1px dashed rgba(0,0,0,0.04);font-size:14px;color:var(--text)}
   tbody tr:nth-child(even) td{background: rgba(0,0,0,0.015)}
   tbody tr:hover td{background: rgba(0,0,0,0.02)}
@@ -87,8 +99,9 @@
   .col-sr{width:60px;white-space:nowrap}
   .col-sku{width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .col-upc{width:140px;white-space:nowrap}
-  /* URL column: show less by making min-width smaller; ellipsis */
-  .col-url{min-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1ea7ff}
+  /* URL column: smaller default min-width so it's truncated; resizable by user */
+  .col-url{min-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1ea7ff}
+  .col-url a{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .col-color{width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .col-size{width:90px;white-space:nowrap}
   .col-price{width:110px;white-space:nowrap;font-weight:normal}
@@ -96,20 +109,19 @@
   .col-avail{width:120px;white-space:nowrap}
 
   .footer-note{margin-top:14px;color:var(--muted);font-size:13px;text-align:center}
-  @media(max-width:900px){ .col-url{min-width:220px} }
+  @media(max-width:900px){ .col-url{min-width:200px} }
 
   /* Toggle switch */
   .switch { position:relative; width:54px; height:30px; border-radius:999px; background: rgba(255,255,255,0.06); display:inline-block; cursor:pointer; border:1px solid rgba(0,0,0,0.06)}
   .switch .knob{ position:absolute; left:4px; top:4px; width:22px; height:22px; border-radius:50%; background: #fff; transition: transform .18s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.25) }
-  :root[data-theme="dark"] .switch{ background: rgba(255,255,255,0.03) }
-  :root[data-theme="light"] .switch{ background: rgba(0,0,0,0.04) }
   .switch.on{ background: var(--accent); }
   .switch.on .knob{ transform: translateX(24px); background:#fff; }
   .toggle-wrap{ display:flex; align-items:center; gap:8px; }
 
-  /* small improvements for anchor link in cell */
+  /* ensure anchors in cells show ellipsis and do not push layout */
   td a { color: inherit; text-decoration: none; display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   td a:hover { text-decoration:underline; }
+
 </style>
 </head>
 <body>
@@ -118,7 +130,7 @@
       <div class="logo">EX</div>
       <div>
         <h1>Product Extractor</h1>
-        <p class="lead">Paste Macy's product links — extraction runs on your laptop. Full preview below; table scrolls inside the box.</p>
+        <p class="lead">Paste Macy's product links — extraction runs on your laptop. Table preview sits inside the box and is scrollable.</p>
       </div>
 
       <div style="margin-left:auto">
@@ -187,7 +199,6 @@
   (function initTheme(){
     const saved = localStorage.getItem('extractor_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', saved);
-    // reflect switch UI
     if(saved === 'light'){ themeSwitch.classList.add('on'); themeSwitch.setAttribute('aria-checked','true'); themeSwitch.querySelector('.knob').style.transform = 'translateX(24px)'; }
   })();
 
@@ -218,31 +229,44 @@
     });
   }
 
-  // render full CSV into table
+  // render full CSV into table with resizable URL column
   function renderTableFromCsv(csv){
     const rows = csvToRows(csv);
     if(!rows || rows.length === 0){ resultsArea.style.display='none'; resultsTable.innerHTML=''; rowsInfo.innerText='Showing: 0 rows'; return; }
     const header = rows[0];
 
+    // build header with resizer on URL column
     const thead = document.createElement('thead');
     const trh = document.createElement('tr');
-    header.forEach(h => {
+    header.forEach((h, index) => {
       const th = document.createElement('th');
-      th.innerText = h.replace(/^"|"$/g,'');
-      const key = h.toString().toLowerCase();
+      const text = h.replace(/^"|"$/g,'') || '';
+      th.innerText = text;
+      const key = text.toString().toLowerCase();
+
       if(key.includes('sr')) th.className = 'col-sr';
       else if(key.includes('sku')) th.className = 'col-sku';
       else if(key.includes('upc')) th.className = 'col-upc';
-      else if(key.includes('url')) th.className = 'col-url';
+      else if(key.includes('url')) {
+        th.className = 'col-url';
+        // add resizer handle
+        const res = document.createElement('span');
+        res.className = 'resizer';
+        res.title = 'Drag to resize column';
+        res.dataset.colIndex = index;
+        th.appendChild(res);
+      }
       else if(key.includes('color')) th.className = 'col-color';
       else if(key.includes('size')) th.className = 'col-size';
       else if(key.includes('current')) th.className = 'col-price';
       else if(key.includes('regular')) th.className = 'col-regular';
       else if(key.includes('avail')) th.className = 'col-avail';
+
       trh.appendChild(th);
     });
     thead.appendChild(trh);
 
+    // build tbody
     const tbody = document.createElement('tbody');
     rows.slice(1).forEach(r => {
       const tr = document.createElement('tr');
@@ -256,6 +280,7 @@
           a.href = raw || '#';
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
+          // show truncated text (CSS does the visual truncation), full available via title
           a.innerText = raw;
           a.title = raw;
           td.appendChild(a);
@@ -278,6 +303,7 @@
       tbody.appendChild(tr);
     });
 
+    // attach table
     resultsTable.innerHTML = '';
     resultsTable.appendChild(thead);
     resultsTable.appendChild(tbody);
@@ -285,9 +311,44 @@
     resultsArea.style.display = 'block';
     rowsInfo.innerText = `Showing: ${rows.length - 1} rows`;
 
-    // ensure sticky header fully covers content: reset scroll
+    // add resizer behavior
+    addResizerHandlers();
+    // reset scroll
     resultsArea.scrollTop = 0;
     resultsArea.scrollLeft = 0;
+  }
+
+  // resizer implementation: adjust matching column <th> width and all corresponding tds
+  function addResizerHandlers(){
+    const resizers = Array.from(document.querySelectorAll('.resizer'));
+    if(!resizers.length) return;
+
+    resizers.forEach(res => {
+      let startX, startWidth, th, colIndex;
+      const onMouseMove = e => {
+        const dx = e.clientX - startX;
+        const newWidth = Math.max(80, startWidth + dx);
+        th.style.width = newWidth + 'px';
+        // also set corresponding tds (best-effort; table-layout:auto so th width influences)
+        // nothing else needed; th width will allow column to resize visually
+      };
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+      };
+      res.addEventListener('mousedown', (ev) => {
+        ev.preventDefault();
+        startX = ev.clientX;
+        th = res.closest('th');
+        if(!th) return;
+        const w = th.getBoundingClientRect().width;
+        startWidth = parseInt(window.getComputedStyle(th).width, 10) || w;
+        document.body.style.cursor = 'col-resize';
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+    });
   }
 
   // socket + CSV behavior (unchanged API)

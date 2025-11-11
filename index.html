@@ -3,89 +3,84 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Extractor · Vibrant UI</title>
+  <title>Extractor · Light / Dark + 10-row preview</title>
 
-  <!-- Socket.IO CDN -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <style>
-    /* ========== Theme ========== */
     :root{
-      --bg-1: #0f1724;
-      --bg-2: linear-gradient(180deg,#071021 0%, #082033 100%);
-      --card: rgba(255,255,255,0.03);
-      --muted: #9fb0c9;
-      --accent-1: #7c5cff;
-      --accent-2: #6be0ff;
-      --accent-3: #ff7aa2;
-      --glass: rgba(255,255,255,0.03);
-      --radius:14px;
-      --shadow: 0 8px 30px rgba(2,6,23,0.6);
       --maxw:1100px;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      color-scheme: dark;
+      --radius:12px;
+      --muted-dark:#9fb0c9;
+      --muted-light:#475569;
+      --accent:#2563eb;
+      --green:#10b981;
+      --card-border: rgba(0,0,0,0.08);
+      --shadow: 0 12px 30px rgba(0,0,0,0.35);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
     }
-    html,body{height:100%;margin:0;background:var(--bg-2); color:#eaf6ff;}
-    .wrap{max-width:var(--maxw); margin:36px auto;padding:22px;box-sizing:border-box;}
-    header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
-    .logo{
-      width:60px;height:60px;border-radius:14px;
-      background:conic-gradient(from 200deg at 50% 50%, var(--accent-1), var(--accent-2), var(--accent-3));
-      display:flex;align-items:center;justify-content:center;font-weight:800;color:#022;box-shadow:0 10px 30px rgba(12,10,25,0.5)
-    }
-    h1{font-size:20px;margin:0}
-    p.lead{margin:0;color:var(--muted);font-size:13px}
 
-    /* main card */
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
-    .form-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
-    label{display:block;font-size:13px;color:var(--muted); margin-bottom:6px}
-    textarea{width:100%;min-height:160px;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:14px;resize:vertical;box-sizing:border-box}
-    .select{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-    .controls{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
-    .btn{
-      display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:14px;
-      background:linear-gradient(90deg,var(--accent-1),var(--accent-2)); color:#061024; box-shadow:0 8px 22px rgba(10,10,30,0.6)
+    /* THEME: default dark */
+    :root[data-theme="dark"]{
+      --page-bg: #07111a;        /* dark background (near-black) */
+      --card-bg: rgba(255,255,255,0.02);
+      --text: #eaf6ff;
+      --muted: var(--muted-dark);
+      --input-bg: rgba(255,255,255,0.01);
+      --btn-text: #fff;
     }
-    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:600}
-    .status{margin-left:auto;color:var(--muted);font-size:13px}
 
-    .meta{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
-    .chip{background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:999px;color:var(--muted);font-size:13px;border:1px solid rgba(255,255,255,0.02)}
-
-    /* Table area */
-    .table-wrap{
-      margin-top:18px;
-      border-radius:12px;
-      overflow:auto;
-      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
-      border:1px solid rgba(255,255,255,0.03);
-      max-height:420px; /* vertical scroll cap */
-      position:relative;
+    /* THEME: light */
+    :root[data-theme="light"]{
+      --page-bg: #f3f7fb;
+      --card-bg: #ffffff;
+      --text: #071021;
+      --muted: var(--muted-light);
+      --input-bg: #ffffff;
+      --btn-text: #fff;
     }
-    table{width:100%;border-collapse:collapse;min-width:900px}
-    thead th{
-      position:sticky; top:0; z-index:2;
-      background: linear-gradient(90deg, rgba(9,12,30,0.9), rgba(9,12,30,0.85));
-      padding:12px 14px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:0.6px;border-bottom:1px solid rgba(255,255,255,0.03);
-    }
-    tbody td{padding:12px 14px;border-bottom:1px dashed rgba(255,255,255,0.03);font-size:14px;color:#dff3ff}
-    tbody tr:nth-child(even) td{background: linear-gradient(90deg, rgba(255,255,255,0.006), rgba(255,255,255,0.002));}
-    tbody tr:hover td{background: rgba(255,255,255,0.02)}
-    .col-sr{width:70px}
-    .col-sku{width:220px}
-    .col-url{max-width:540px;word-break:break-all;color:#bfe8ff;font-size:13px}
-    .col-price{font-weight:800;color:#fff}
-    .small{font-size:13px;color:var(--muted)}
 
-    /* footer */
-    footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
+    html,body{ height:100%; margin:0; background:var(--page-bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+    .wrap{ max-width:var(--maxw); margin:34px auto; padding:20px; box-sizing:border-box; }
 
-    /* responsive tweak */
-    @media (max-width:900px){
-      .col-url{max-width:360px}
-      .table-wrap{max-height:340px}
-    }
+    header{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+    .logo{ width:56px; height:56px; border-radius:12px; background:var(--card-bg); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--text); box-shadow:var(--shadow) }
+    h1{ margin:0; font-size:20px }
+    p.lead{ margin:0; color:var(--muted); font-size:13px }
+
+    .main-card{ background:var(--card-bg); border-radius:12px; padding:16px; border:1px solid var(--card-border); box-shadow:var(--shadow) }
+    label{ display:block; font-size:13px; color:var(--muted); margin-bottom:8px }
+    textarea{ width:100%; min-height:150px; padding:12px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); background:var(--input-bg); color:var(--text); font-size:14px; box-sizing:border-box; resize:vertical }
+
+    .controls{ display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap }
+    /* solid buttons (no gradient) */
+    .btn{ padding:10px 14px; border-radius:10px; border:none; cursor:pointer; font-weight:700; font-size:14px; color:var(--btn-text) }
+    .btn-primary{ background: var(--accent); }
+    .btn-download{ background: var(--green); }
+    .btn-ghost{ background:transparent; border:1px solid rgba(0,0,0,0.06); color:var(--muted); font-weight:600 }
+
+    .status{ margin-left:auto; color:var(--muted); font-size:13px }
+
+    .meta{ display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap }
+    .chip{ background: rgba(255,255,255,0.02); padding:8px 12px; border-radius:999px; color:var(--muted); font-size:13px; border:1px solid rgba(255,255,255,0.02) }
+
+    /* results area: scrollable viewport */
+    .table-wrap{ margin-top:18px; border-radius:12px; overflow:auto; background:var(--card-bg); border:1px solid var(--card-border); max-height:360px; padding:8px; }
+    table{ width:100%; border-collapse:collapse; min-width:900px; }
+    thead th{ position:sticky; top:0; z-index:2; background:var(--card-bg); padding:10px 12px; color:var(--muted); font-size:12px; text-transform:uppercase; border-bottom:1px solid rgba(0,0,0,0.06) }
+    tbody td{ padding:10px 12px; border-bottom:1px dashed rgba(0,0,0,0.04); font-size:14px; color:var(--text); word-break:break-word }
+    tbody tr:nth-child(even) td{ background: rgba(0,0,0,0.015) }
+    .col-sr{ width:60px }
+    .col-sku{ width:200px }
+    .col-upc{ width:160px }
+    .col-url{ max-width:520px; color:#7ec8ff }
+    .col-color{ width:110px }
+    .col-size{ width:90px }
+    .col-price{ width:110px; font-weight:800 }
+
+    .footer-note{ margin-top:14px; color:var(--muted); font-size:13px; text-align:center }
+
+    @media(max-width:900px){ .col-url{ max-width:320px } }
   </style>
 </head>
 <body>
@@ -94,194 +89,225 @@
       <div class="logo">EX</div>
       <div>
         <h1>Product Extractor</h1>
-        <p class="lead">Paste Macy’s product links, submit and watch your extraction queue. CSV preview shows below — table is fully scrollable.</p>
+        <p class="lead">Paste Macy's product links — submit to queue and preview CSV below (10-row preview).</p>
       </div>
-      <div id="connStatus" class="small" style="margin-left:auto;color:#9fb0c9">Connecting...</div>
+
+      <!-- theme toggle -->
+      <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+        <div style="color:var(--muted); font-size:13px">Theme</div>
+        <button id="themeBtn" class="btn btn-ghost" style="padding:8px 10px">Toggle</button>
+      </div>
     </header>
 
-    <main class="card" role="main" aria-live="polite">
+    <main class="main-card" role="main" aria-live="polite">
       <label for="urls">Product URLs (one per line)</label>
       <textarea id="urls" placeholder="https://www.macys.com/shop/product/..." aria-label="Product URLs"></textarea>
 
       <div class="controls">
-        <button id="submitBtn" class="btn" aria-label="Submit to queue">Submit</button>
-        <a id="downloadBtn" class="btn ghost" style="display:none" download>Download CSV</a>
-        <button id="clearBtn" class="btn ghost">Clear</button>
+        <button id="submitBtn" class="btn btn-primary">Submit</button>
+        <a id="downloadBtn" class="btn btn-download" style="display:none" download>Download CSV</a>
+        <button id="clearBtn" class="btn btn-ghost">Clear</button>
         <div class="status" id="status">Not connected</div>
       </div>
 
-      <div class="meta" aria-hidden="false">
+      <div class="meta">
         <div class="chip" id="queueInfo">Queue: 0</div>
         <div class="chip" id="posInfo">Position: -</div>
         <div class="chip" id="itemsInfo">Items: -</div>
       </div>
 
       <div id="resultsArea" class="table-wrap" style="display:none">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="font-size:13px; color:var(--muted)" id="showingInfo">Showing 0 of 0</div>
+          <div style="font-size:13px; color:var(--muted)">Preview (first 10 rows)</div>
+        </div>
+
         <table id="resultsTable" role="table" aria-label="Extraction results table">
-          <!-- header will be injected -->
+          <!-- header + body injected by JS -->
         </table>
       </div>
 
     </main>
 
-    <footer>
-      <span class="small">Tip: keep ngrok and your local server running. If sockets fail, switch BACKEND to polling (see console).</span>
-    </footer>
+    <div class="footer-note">Tip: keep ngrok & local server running. Download removes the file from the server after transfer.</div>
   </div>
 
-  <script>
-    // ======= CONFIG =======
-    const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'; // <-- set your ngrok URL here (no trailing spaces)
-    // ======================
+<script>
+  // ===== CONFIG (set your ngrok/backend URL) =====
+  const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev';
+  // =============================================
 
-    // DOM
-    const statusEl = document.getElementById('status');
-    const connStatusEl = document.getElementById('connStatus');
-    const queueInfo = document.getElementById('queueInfo');
-    const posInfo = document.getElementById('posInfo');
-    const itemsInfo = document.getElementById('itemsInfo');
-    const resultsArea = document.getElementById('resultsArea');
-    const resultsTable = document.getElementById('resultsTable');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const urlsInput = document.getElementById('urls');
+  // DOM refs
+  const urlsInput = document.getElementById('urls');
+  const submitBtn = document.getElementById('submitBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const statusEl = document.getElementById('status');
+  const queueInfo = document.getElementById('queueInfo');
+  const posInfo = document.getElementById('posInfo');
+  const itemsInfo = document.getElementById('itemsInfo');
+  const resultsArea = document.getElementById('resultsArea');
+  const resultsTable = document.getElementById('resultsTable');
+  const showingInfo = document.getElementById('showingInfo');
+  const themeBtn = document.getElementById('themeBtn');
 
-    // utility
-    function setStatus(t){ statusEl.innerText = t; }
-    function setConn(t){ connStatusEl.innerText = t; }
-    function safeBackend(){ return (typeof BACKEND === 'string' ? BACKEND.trim() : BACKEND); }
+  function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
+  function setStatus(t){ statusEl.innerText = t; }
+  function setConn(t){ /* not used separately here */ }
 
-    // socket
-    let socket = null;
-    function connectSocket(){
-      const backend = safeBackend();
-      console.log('Socket connect to:', backend);
-      setConn('Connecting...');
-      // try websocket first; if it errors, client will fall back to polling automatically
-      try {
-        socket = io(backend, { transports:['websocket','polling'], path: '/socket.io', timeout: 10000 });
-      } catch(e){
-        console.error('Socket init error', e);
-        setConn('Socket init error');
-        setStatus('Socket error — check BACKEND');
-        return;
+  // THEME: init from localStorage (default dark)
+  (function initTheme(){
+    const saved = localStorage.getItem('extractor_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+  })();
+  themeBtn.addEventListener('click', ()=>{
+    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('extractor_theme', next);
+  });
+
+  // simple CSV parser (handles quoted fields), returns array of rows (array of cells)
+  function csvToRows(csv){
+    const lines = csv.split(/\r?\n/).filter(l => l.trim() !== '');
+    return lines.map(l => {
+      const cells = []; let cur=''; let inQ=false;
+      for (let i=0;i<l.length;i++){
+        const ch = l[i];
+        if (ch === '"'){ if(inQ && l[i+1] === '"'){ cur += '"'; i++; continue; } inQ = !inQ; continue; }
+        if (ch === ',' && !inQ){ cells.push(cur); cur=''; continue; }
+        cur += ch;
       }
+      cells.push(cur);
+      return cells;
+    });
+  }
 
-      socket.on('connect', ()=>{ setConn('Connected'); setStatus('Ready'); console.log('Socket connected', socket.id); });
-      socket.on('connect_error', (err) => {
-        console.warn('Socket connect_error', err);
-        setConn('Socket error');
-        setStatus('Socket connect error — see console');
-      });
-      socket.on('error', (e)=>{ console.error('Socket error', e); setStatus('Socket error'); });
+  // RENDER: show only up to 10 data rows (rows[1..10]); still display header
+  function renderTableFromCsv(csv){
+    const rows = csvToRows(csv);
+    if (!rows || rows.length === 0) { resultsArea.style.display='none'; resultsTable.innerHTML=''; showingInfo.innerText='Showing 0 of 0'; return; }
+    const totalRows = Math.max(0, rows.length - 1);
+    // header
+    const header = rows[0];
+    const thead = document.createElement('thead');
+    const thr = document.createElement('tr');
+    header.forEach(h => {
+      const th = document.createElement('th');
+      th.innerText = h.replace(/^"|"$/g,'');
+      // give class names for known columns for nicer widths
+      const key = h.toString().toLowerCase();
+      if (key.includes('sr') || key.includes('srno')) th.className = 'col-sr';
+      else if (key.includes('sku')) th.className = 'col-sku';
+      else if (key.includes('upc')) th.className = 'col-upc';
+      else if (key.includes('url')) th.className = 'col-url';
+      else if (key.includes('color')) th.className = 'col-color';
+      else if (key.includes('size')) th.className = 'col-size';
+      else if (key.includes('price')) th.className = 'col-price';
+      thr.appendChild(th);
+    });
+    thead.appendChild(thr);
 
-      socket.on('queue_update', payload => {
-        setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
-        queueInfo.innerText = `Queue: ${payload.total || 0}`;
-        posInfo.innerText = `Position: ${payload.position || '-'}`;
+    // body: only first 10 data rows
+    const tbody = document.createElement('tbody');
+    const dataRows = rows.slice(1, 11); // up to 10 rows
+    dataRows.forEach(r => {
+      const tr = document.createElement('tr');
+      r.forEach((cell, idx) => {
+        const td = document.createElement('td');
+        td.innerText = (cell || '').replace(/^'|^"|"$/g,'');
+        // apply simple classes based on header position
+        const h = header[idx] ? header[idx].toString().toLowerCase() : '';
+        if (h.includes('sr')) td.className = 'col-sr';
+        else if (h.includes('sku')) td.className = 'col-sku';
+        else if (h.includes('upc')) td.className = 'col-upc';
+        else if (h.includes('url')) td.className = 'col-url';
+        else if (h.includes('color')) td.className = 'col-color';
+        else if (h.includes('size')) td.className = 'col-size';
+        else if (h.includes('price')) td.className = 'col-price';
+        tr.appendChild(td);
       });
+      tbody.appendChild(tr);
+    });
 
-      socket.on('extraction_complete', async data => {
-        const rel = data.downloadUrl || '';
-        const full = rel.startsWith('http') ? rel : (safeBackend() + rel);
-        downloadBtn.href = full; downloadBtn.style.display = 'inline-block';
-        setStatus('Extraction complete — fetching preview...');
-        itemsInfo.innerText = `Items: ${data.totalItems || '-'}`;
-        try {
-          const res = await fetch(full);
-          if(!res.ok) throw new Error('CSV fetch returned ' + res.status);
-          const text = await res.text();
-          renderTableFromCsv(text);
-          setStatus('Preview ready • Click Download to save');
-        } catch(err){
-          console.error('Failed to fetch CSV preview', err);
-          setStatus('Extraction complete — click Download to save file');
-        }
-      });
+    resultsTable.innerHTML = '';
+    resultsTable.appendChild(thead);
+    resultsTable.appendChild(tbody);
+
+    resultsArea.style.display = 'block';
+    showingInfo.innerText = `Showing ${Math.min(10, totalRows)} of ${totalRows}`;
+    // reset scroll inside results
+    resultsArea.scrollTop = 0;
+    resultsArea.scrollLeft = 0;
+  }
+
+  // SOCKET + CSV download handling (no changes to server API)
+  let socket = null;
+  function connectSocket(){
+    const backend = safeBackend();
+    setStatus('Connecting...');
+    try {
+      socket = io(backend, { transports:['websocket','polling'], path:'/socket.io', timeout:10000 });
+    } catch(e){
+      console.error('Socket init', e); setStatus('Socket init error'); return;
     }
-
-    // CSV parsing (simple but handles quoted fields)
-    function csvToRows(csv){
-      const lines = csv.split(/\r?\n/).filter(l=>l.trim()!=='');
-      return lines.map(l=>{
-        const cells = []; let cur=''; let inQuotes=false;
-        for(let i=0;i<l.length;i++){
-          const ch = l[i];
-          if(ch === '"'){ if(inQuotes && l[i+1] === '"'){ cur += '"'; i++; continue;} inQuotes = !inQuotes; continue; }
-          if(ch === ',' && !inQuotes){ cells.push(cur); cur=''; continue; }
-          cur += ch;
-        }
-        cells.push(cur);
-        return cells;
-      });
-    }
-
-    function renderTableFromCsv(csv){
-      const rows = csvToRows(csv);
-      if(!rows || rows.length===0){ resultsArea.style.display='none'; resultsTable.innerHTML=''; return; }
-      resultsArea.style.display = 'block';
-      // header
-      const header = rows[0];
-      const thead = document.createElement('thead');
-      const trh = document.createElement('tr');
-      header.forEach(h => { const th = document.createElement('th'); th.innerText = h.replace(/^"|"$/g,''); trh.appendChild(th); });
-      thead.appendChild(trh);
-
-      // body (cap 1000 rows)
-      const tbody = document.createElement('tbody');
-      rows.slice(1, 1001).forEach(row => {
-        const tr = document.createElement('tr');
-        row.forEach(cell => {
-          const td = document.createElement('td');
-          td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
-
-      resultsTable.innerHTML = '';
-      resultsTable.appendChild(thead);
-      resultsTable.appendChild(tbody);
-
-      // nice scroll to top
-      resultsArea.scrollTop = 0;
-      resultsArea.scrollLeft = 0;
-    }
-
-    async function submitToQueue(){
-      if(!socket || socket.disconnected){ alert('Socket not connected. Start ngrok & server.'); return; }
-      const raw = urlsInput.value.trim();
-      if(!raw){ alert('Paste one or more URLs (one per line).'); return; }
-      const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      setStatus('Submitting...');
+    socket.on('connect', ()=> { setStatus('Ready'); document.getElementById('connStatus')?.remove?.(); });
+    socket.on('connect_error', (err)=> { console.warn('connect_error', err); setStatus('Socket error — check console'); });
+    socket.on('queue_update', payload => {
+      setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
+      queueInfo.innerText = `Queue: ${payload.total || 0}`;
+      posInfo.innerText = `Position: ${payload.position || '-'}`;
+    });
+    socket.on('extraction_complete', async data => {
+      const rel = data.downloadUrl || '';
+      const full = rel.startsWith('http') ? rel : (safeBackend() + rel);
+      downloadBtn.href = full; downloadBtn.style.display = 'inline-block';
+      setStatus('Extraction complete — fetching preview...');
+      itemsInfo.innerText = `Items: ${data.totalItems || '-'}`;
       try {
-        const res = await fetch(safeBackend() + '/queue_submit', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ site: 'macys', urls })
-        });
-        if(!res.ok){ const t = await res.text(); throw new Error(t || 'Server error'); }
-        const json = await res.json();
-        setStatus(json.message || 'Submitted — waiting in queue');
-        const userId = json.userId || json.id || json.room;
-        if(userId) socket.emit('join_queue', userId);
-      } catch (err){
-        console.error('Submit error', err);
-        alert('Submit failed: ' + (err.message || err));
-        setStatus('Submit failed');
+        const res = await fetch(full);
+        if(!res.ok) throw new Error('CSV fetch returned ' + res.status);
+        const text = await res.text();
+        renderTableFromCsv(text);
+        setStatus('Preview ready — click Download to save');
+      } catch(err){
+        console.error('CSV fetch failed', err);
+        setStatus('Extraction complete — click Download to save file');
       }
+    });
+  }
+  connectSocket();
+
+  async function submitToQueue(){
+    if(!socket || socket.disconnected){ alert('Socket not connected. Start ngrok & server.'); return; }
+    const raw = urlsInput.value.trim();
+    if(!raw){ alert('Paste one or more URLs (one per line).'); return; }
+    const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    setStatus('Submitting...');
+    try {
+      const res = await fetch(safeBackend() + '/queue_submit', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ site:'macys', urls })
+      });
+      if(!res.ok){ const t = await res.text(); throw new Error(t || 'Server error'); }
+      const json = await res.json();
+      setStatus(json.message || 'Submitted — waiting in queue');
+      const userId = json.userId || json.id || json.room;
+      if(userId) socket.emit('join_queue', userId);
+    } catch(err){
+      console.error('Submit error', err);
+      alert('Submit failed: ' + (err.message || err));
+      setStatus('Submit failed');
     }
+  }
 
-    // wire buttons
-    submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
-    clearBtn.addEventListener('click', ()=> urlsInput.value = '');
+  // wiring
+  submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
+  clearBtn.addEventListener('click', ()=> { urlsInput.value=''; resultsArea.style.display='none'; resultsTable.innerHTML=''; downloadBtn.style.display='none'; showingInfo.innerText='Showing 0 of 0'; });
 
-    // init
-    connectSocket();
-
-    // exps
-    window.__EXTRACTOR = { connectSocket, submitToQueue, renderTableFromCsv };
-  </script>
+  // expose for debug
+  window.__EXTRACTOR = { renderTableFromCsv, submitToQueue, connectSocket };
+</script>
 </body>
 </html>

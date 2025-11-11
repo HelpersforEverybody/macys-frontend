@@ -3,10 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Extractor — Scrollable Table + Theme</title>
+<title>Extractor — Fixed Scrollable Table</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
-  /* ===== tokens ===== */
   :root{
     --maxw:1180px;
     --radius:12px;
@@ -20,39 +19,28 @@
     font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
   }
 
-  /* page-level - force no horizontal scroll */
-  html,body{
-    margin:0;
-    height:100%;
-    overflow-x:hidden; /* critical: page must not scroll horizontally */
-  }
+  /* block page horizontal scroll completely */
+  html,body{ margin:0; height:100%; overflow-x:hidden; }
 
-  /* THEMES: default dark (pure black bg) */
+  /* Themes */
   :root[data-theme="dark"]{
-    --page-bg: #000000; /* pure black */
-    --page-text: #e6eef6;
+    --page-bg:#000000;
+    --page-text:#e6eef6;
     --card-bg: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
     --muted: var(--muted-dark);
     --surface: rgba(255,255,255,0.01);
-    --btn-text: #fff;
+    --btn-text:#fff;
   }
-
-  /* light theme */
   :root[data-theme="light"]{
     --page-bg: linear-gradient(180deg,#f6fbff 0%, #eef6ff 100%);
-    --page-text: #071021;
-    --card-bg: #ffffff;
+    --page-text:#071021;
+    --card-bg:#ffffff;
     --muted: var(--muted-light);
-    --surface: #f8fafc;
-    --btn-text: #022;
+    --surface:#f8fafc;
+    --btn-text:#022;
   }
 
-  body{
-    background: var(--page-bg);
-    color: var(--page-text);
-    -webkit-font-smoothing:antialiased;
-  }
-
+  body{ background:var(--page-bg); color:var(--page-text); -webkit-font-smoothing:antialiased; }
   .container{ max-width:var(--maxw); margin:34px auto; padding:18px; box-sizing:border-box; }
 
   header{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
@@ -60,86 +48,72 @@
   h1{ margin:0; font-size:20px; }
   p.lead{ margin:0; color:var(--muted); font-size:13px; }
 
-  /* grid */
   .main-grid{ display:grid; grid-template-columns:1fr; gap:18px; }
-  @media(min-width:1000px){ .main-grid{ grid-template-columns: 1fr 320px; } }
+  @media(min-width:1000px){ .main-grid{ grid-template-columns:1fr 320px; } }
 
-  /* form card */
-  .card{
-    background: var(--card-bg);
-    border-radius:12px;
-    padding:16px;
-    border:1px solid var(--card-border);
-    box-shadow: var(--shadow);
-  }
+  .card{ background:var(--card-bg); border-radius:12px; padding:16px; border:1px solid var(--card-border); box-shadow:var(--shadow); }
   label{ display:block; margin-bottom:8px; color:var(--muted); font-size:13px; }
   textarea{ width:100%; min-height:140px; padding:12px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); background:var(--surface); color:var(--page-text); font-size:14px; box-sizing:border-box; resize:vertical; }
+
   .controls{ display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
   .status{ margin-left:auto; color:var(--muted); font-size:13px; }
 
-  /* buttons (solid colors, no gradient) */
   .btn{ padding:10px 16px; border-radius:10px; border:none; cursor:pointer; font-weight:700; font-size:14px; }
   .btn-blue{ background: var(--accent-blue); color:var(--btn-text); }
   .btn-green{ background: var(--accent-green); color:var(--btn-text); }
-  .btn-ghost{ background: transparent; border:1px solid rgba(0,0,0,0.06); color:var(--muted); font-weight:600; }
+  .btn-ghost{ background:transparent; border:1px solid rgba(0,0,0,0.06); color:var(--muted); font-weight:600; }
 
   .meta-row{ margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-  .badge{ background: var(--surface); padding:6px 10px; border-radius:999px; color:var(--muted); font-weight:700; font-size:13px; }
+  .badge{ background:var(--surface); padding:6px 10px; border-radius:999px; color:var(--muted); font-weight:700; font-size:13px; }
 
-  /* results card: DIFFERENT FROM PAGE BG (still subtle) */
   .results-card{ margin-top:18px; border-radius:12px; padding:10px; background:var(--card-bg); border:1px solid var(--card-border); }
 
-  /* TABLE VIEWPORT: internal scrolling only */
-  .table-viewport{
-    max-height:480px;        /* vertical scroll cap */
-    overflow:auto;           /* both horizontal & vertical inside */
-    border-radius:8px;
-    background: transparent;
-    padding-bottom:4px;
-  }
+  /* IMPORTANT: viewport handles both scroll axes; page will not expand horizontally */
+  .table-viewport{ max-height:480px; overflow:auto; border-radius:8px; background:transparent; padding-bottom:4px; }
 
   table{
     width:100%;
     border-collapse:collapse;
-    min-width:1100px;        /* if many columns, horizontal scrollbar appears inside viewport */
-    table-layout:auto;
+    table-layout: fixed; /* key: fixed layout so column widths + wrapping behave predictably */
+    min-width:900px;     /* if you want more internal horizontal scroll, increase this */
   }
 
   thead th{
     position:sticky; top:0; z-index:3;
-    background: var(--card-bg);
-    padding:12px 14px; font-size:12px; color:var(--muted); text-transform:uppercase; border-bottom:1px solid rgba(255,255,255,0.03);
-    text-align:left;
+    background:var(--card-bg);
+    padding:12px 14px; font-size:12px; color:var(--muted); text-transform:uppercase; border-bottom:1px solid rgba(255,255,255,0.03); text-align:left;
   }
 
-  tbody td{ padding:12px 14px; border-bottom:1px dashed rgba(255,255,255,0.03); color:var(--page-text); vertical-align:top; font-size:14px; }
+  tbody td{ padding:12px 14px; border-bottom:1px dashed rgba(255,255,255,0.03); color:var(--page-text); vertical-align:top; font-size:14px; overflow-wrap: anywhere; }
   tbody tr:nth-child(even) td{ background: rgba(255,255,255,0.01); }
   tbody tr:hover td{ background: rgba(255,255,255,0.02); }
 
-  .sr{ width:70px; color:var(--muted); }
-  .sku{ width:220px; }
-  .upc{ width:180px; color:var(--muted); }
-  .urlcell{ max-width:760px; white-space:normal; word-break:break-word; color:#9ad1ff; font-size:13px; }
-  .colorcell{ width:120px; }
-  .sizecell{ width:80px; text-align:left; }
-  .pricecell{ width:120px; font-weight:800; color:var(--page-text); }
+  /* Column widths (applied to header/td via classes) */
+  th.sr, td.sr{ width:60px; min-width:60px; }
+  th.sku, td.sku{ width:200px; min-width:150px; }
+  th.upc, td.upc{ width:160px; min-width:120px; }
+  th.url, td.url{ width:1fr; /* flex-like: remaining space */ min-width:420px; }
+  th.color, td.color{ width:110px; min-width:80px; }
+  th.size, td.size{ width:90px; min-width:70px; }
+  th.current, td.current{ width:110px; min-width:90px; text-align:left; }
+  th.regular, td.regular{ width:110px; min-width:90px; text-align:left; }
+  th.avail, td.avail{ width:110px; min-width:90px; text-align:left; }
 
-  /* ensure page vertical scrollbar only; hide any accidental horizontal overflow */
+  /* Ensure URL cells wrap and don't expand page */
+  td.url { white-space: normal; word-break: break-word; overflow-wrap: anywhere; color:#9ad1ff; font-size:13px; }
+
   @media (max-width:600px){ .container{ padding:12px; } }
-
   footer{ margin-top:20px; color:var(--muted); text-align:center; font-size:13px; }
 </style>
 </head>
 <body>
-  <div class="container" role="main">
+  <div class="container">
     <header>
       <div class="logo">EX</div>
       <div>
         <h1>Product Extractor</h1>
         <p class="lead">Paste Macy's product links — extraction runs on your laptop. Table scrolls inside card.</p>
       </div>
-
-      <!-- Theme toggle -->
       <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
         <div style="color:var(--muted);font-size:13px">Theme</div>
         <button id="themeToggle" class="btn btn-ghost" style="padding:8px 10px;font-weight:700">Toggle</button>
@@ -185,20 +159,19 @@
           <div><strong>Quick Tips</strong></div>
           <ul class="small" style="margin:8px 0 0 18px;line-height:1.6">
             <li>Paste one URL per line</li>
-            <li>Table preview up to 2000 rows; it's scrollable</li>
+            <li>Table preview up to 2000 rows; it scrolls inside the card</li>
             <li>Download removes server file after transfer</li>
           </ul>
         </div>
       </aside>
     </div>
 
-    <footer>UI updated — table scrolls inside card, page only scrolls vertically, theme toggle uses black dark background.</footer>
+    <footer>Table fixed — long URLs wrap and the page won't expand horizontally.</footer>
   </div>
 
 <script>
-/* ===== CONFIG: set your backend (no trailing spaces) ===== */
+/* CONFIG - set your backend (no trailing spaces) */
 const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev';
-/* ======================================================= */
 
 const urlsInput = document.getElementById('urls');
 const submitBtn = document.getElementById('submitBtn');
@@ -212,26 +185,11 @@ const posInfo = document.getElementById('posInfo');
 const itemsInfo = document.getElementById('itemsInfo');
 const resultsTable = document.getElementById('resultsTable');
 const tableViewport = document.getElementById('tableViewport');
-const tableCard = document.getElementById('resultsCard');
 const themeToggle = document.getElementById('themeToggle');
 
 function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
 
-function updateUrlCount(){
-  const raw = urlsInput.value.trim();
-  const count = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length : 0;
-  urlCount.innerText = count;
-}
-urlsInput.addEventListener('input', updateUrlCount);
-
-function setStatus(t){ statusEl.innerText = t; }
-function setConn(t){ connStatus.innerText = t; }
-
-/* THEME */
-(function initTheme(){
-  const saved = localStorage.getItem('extractor_theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', saved);
-})();
+(function initTheme(){ const saved = localStorage.getItem('extractor_theme') || 'dark'; document.documentElement.setAttribute('data-theme', saved); })();
 themeToggle.addEventListener('click', ()=>{
   const cur = document.documentElement.getAttribute('data-theme') || 'dark';
   const next = cur === 'dark' ? 'light' : 'dark';
@@ -239,30 +197,28 @@ themeToggle.addEventListener('click', ()=>{
   localStorage.setItem('extractor_theme', next);
 });
 
-/* SOCKET + submit logic */
+function updateUrlCount(){ const raw = urlsInput.value.trim(); const count = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length : 0; urlCount.innerText = count; }
+urlsInput.addEventListener('input', updateUrlCount);
+
+function setStatus(t){ statusEl.innerText = t; }
+function setConn(t){ connStatus.innerText = t; }
+
+/* ---------- SOCKET ------------- */
 let socket = null;
 function connectSocket(){
   const backend = safeBackend();
   console.log('Socket connecting to', backend);
   setConn('Connecting…');
-  try {
-    socket = io(backend, { transports:['websocket','polling'], path:'/socket.io', timeout:10000 });
-  } catch(e){
-    console.error('Socket init error', e);
-    setConn('Socket init error');
-    return;
-  }
-  socket.on('connect', ()=>{ setConn('Connected'); setStatus('Ready'); console.log('Socket connected', socket.id); });
-  socket.on('connect_error', (err)=>{ console.warn('connect_error', err); setConn('Socket error'); setStatus('Socket connect error — see console'); });
-  socket.on('queue_update', payload => {
-    setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
-    queueInfo.innerText = payload.total || 0;
-    posInfo.innerText = payload.position || '-';
-  });
+  try { socket = io(backend, { transports:['websocket','polling'], path:'/socket.io', timeout:10000 }); }
+  catch(e){ console.error('Socket init error', e); setConn('Socket init error'); return; }
+
+  socket.on('connect', ()=>{ setConn('Connected'); setStatus('Ready'); });
+  socket.on('connect_error', (err)=>{ console.warn('connect_error', err); setConn('Socket error'); setStatus('Socket error'); });
+  socket.on('queue_update', payload => { setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`); queueInfo.innerText = payload.total || 0; posInfo.innerText = payload.position || '-'; });
 
   socket.on('extraction_complete', async data => {
     const rel = data.downloadUrl || '';
-    if(!rel){ setStatus('Extraction complete (no downloadUrl)'); return; }
+    if(!rel){ setStatus('Extraction complete (no download URL)'); return; }
     const full = rel.startsWith('http') ? rel : (safeBackend() + rel);
     downloadBtn.href = full; downloadBtn.style.display = 'inline-block';
     setStatus('Extraction complete — fetching preview...');
@@ -273,15 +229,88 @@ function connectSocket(){
       const txt = await res.text();
       renderTableFromCsv(txt);
       setStatus('Preview ready — click Download to save');
-    } catch(err){
-      console.error('CSV fetch failed', err);
-      setStatus('Extraction complete — click Download to save file');
-    }
+    } catch(err){ console.error('CSV fetch failed', err); setStatus('Extraction complete — click Download to save'); }
   });
-  socket.on('error', e => { console.error('socket error', e); setConn('Socket error'); });
 }
 connectSocket();
 
+/* ---------- CSV rendering with column classes ---------- */
+/* We add classes per header so long URL column (td.url) wraps and doesn't expand page */
+function csvToRows(csv){
+  const lines = csv.split(/\r?\n/).filter(l => l.trim() !== '');
+  return lines.map(l => {
+    const cells = []; let cur=''; let inQ=false;
+    for(let i=0;i<l.length;i++){
+      const ch = l[i];
+      if(ch === '"'){ if(inQ && l[i+1] === '"'){ cur += '"'; i++; continue; } inQ = !inQ; continue; }
+      if(ch === ',' && !inQ){ cells.push(cur); cur=''; continue; }
+      cur += ch;
+    }
+    cells.push(cur);
+    return cells;
+  });
+}
+
+function normaliseHeader(h){
+  return (h||'').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
+}
+
+function headerToClass(headerName){
+  const n = normaliseHeader(headerName);
+  if(n.includes('sr') || n.includes('srno') || n.includes('srno')) return 'sr';
+  if(n.includes('sku')) return 'sku';
+  if(n.includes('upc')) return 'upc';
+  if(n.includes('url')) return 'url';
+  if(n.includes('color')) return 'color';
+  if(n.includes('size')) return 'size';
+  if(n.includes('current')) return 'current';
+  if(n.includes('regular')) return 'regular';
+  if(n.includes('avail')) return 'avail';
+  // fallback
+  return '';
+}
+
+function renderTableFromCsv(csv){
+  const rows = csvToRows(csv);
+  if(!rows || rows.length === 0){ resultsTable.innerHTML=''; tableViewport.style.display='none'; return; }
+  tableViewport.style.display = 'block';
+
+  const header = rows[0];
+  const thead = document.createElement('thead');
+  const thr = document.createElement('tr');
+
+  const colClasses = header.map(h => headerToClass(h));
+
+  header.forEach((h, idx) => {
+    const th = document.createElement('th');
+    th.innerText = h.replace(/^"|"$/g,'');
+    if(colClasses[idx]) th.classList.add(colClasses[idx]);
+    thr.appendChild(th);
+  });
+  thead.appendChild(thr);
+
+  const tbody = document.createElement('tbody');
+  rows.slice(1, 5000).forEach(r => {
+    const tr = document.createElement('tr');
+    r.forEach((cell, idx) => {
+      const td = document.createElement('td');
+      td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
+      if(colClasses[idx]) td.classList.add(colClasses[idx]);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  resultsTable.innerHTML = '';
+  resultsTable.appendChild(thead);
+  resultsTable.appendChild(tbody);
+
+  // ensure scrolling happens inside viewport (not page)
+  tableViewport.scrollTop = 0;
+  tableViewport.scrollLeft = 0;
+}
+
+/* ---------- submit to queue ---------- */
 async function submitToQueue(){
   if(!socket || socket.disconnected){ alert('Socket not connected. Start ngrok & server.'); return; }
   const raw = urlsInput.value.trim();
@@ -305,57 +334,16 @@ async function submitToQueue(){
     setStatus('Submit failed');
   }
 }
+
+/* wiring */
 submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
 clearBtn.addEventListener('click', ()=> { urlsInput.value=''; updateUrlCount(); resultsTable.innerHTML=''; tableViewport.style.display='none'; downloadBtn.style.display='none'; });
+urlsInput.addEventListener('input', updateUrlCount);
+function updateUrlCount(){ const raw = urlsInput.value.trim(); const count = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length : 0; urlCount.innerText = count; }
 
-/* CSV parser & render (keeps table inside viewport) */
-function csvToRows(csv){
-  const lines = csv.split(/\r?\n/).filter(l => l.trim() !== '');
-  return lines.map(l => {
-    const cells = []; let cur=''; let inQ=false;
-    for(let i=0;i<l.length;i++){
-      const ch = l[i];
-      if(ch === '"'){ if(inQ && l[i+1] === '"'){ cur += '"'; i++; continue; } inQ = !inQ; continue; }
-      if(ch === ',' && !inQ){ cells.push(cur); cur=''; continue; }
-      cur += ch;
-    }
-    cells.push(cur);
-    return cells;
-  });
-}
+/* expose for testing */
+window.__EXTRACTOR = { renderTableFromCsv, submitToQueue, connectSocket };
 
-function renderTableFromCsv(csv){
-  const rows = csvToRows(csv);
-  if(!rows || rows.length === 0){ resultsTable.innerHTML=''; tableViewport.style.display='none'; return; }
-  tableViewport.style.display='block';
-  const header = rows[0];
-  const thead = document.createElement('thead');
-  const thRow = document.createElement('tr');
-  header.forEach(h => { const th = document.createElement('th'); th.innerText = h.replace(/^"|"$/g,''); thRow.appendChild(th); });
-  thead.appendChild(thRow);
-
-  const tbody = document.createElement('tbody');
-  rows.slice(1,2000).forEach(r => {
-    const tr = document.createElement('tr');
-    r.forEach(cell => {
-      const td = document.createElement('td');
-      td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-
-  resultsTable.innerHTML = '';
-  resultsTable.appendChild(thead);
-  resultsTable.appendChild(tbody);
-
-  // ensure internal scroll, not page
-  tableViewport.scrollTop = 0;
-  tableViewport.scrollLeft = 0;
-}
-
-/* expose for debugging */
-window.__EXTRACTOR = { connectSocket, submitToQueue, renderTableFromCsv };
 </script>
 </body>
 </html>

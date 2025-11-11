@@ -3,223 +3,250 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Product Data Extractor</title>
+  <title>Extractor · Minimal</title>
 
+  <!-- Socket.IO CDN -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 28px; color: #111; }
-    h1 { text-align: left; margin-bottom: 14px; }
-    label { display:block; margin-top:12px; margin-bottom:6px; font-weight:600; }
-    textarea { width:100%; height:180px; padding:10px; border:1px solid #ccc; border-radius:6px; font-family: monospace; font-size:13px; }
-    select, button { padding:10px 14px; margin-top:6px; border-radius:6px; border:1px solid #bbb; }
-    button { background:#f5f5f5; cursor:pointer; }
-    #controls { margin-top:18px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    #status { color:#444; margin-top:8px; }
-    #downloadBtn { display:none; background:#2b8bd3; color:white; padding:8px 12px; text-decoration:none; border-radius:6px; }
-    table { width:100%; border-collapse:collapse; margin-top:16px; }
-    th, td { border:1px solid #e6e6e6; padding:8px; text-align:left; font-size:13px; }
-    thead th { background:#fafafa; }
-    #results { margin-top:18px; }
-    .small { font-size:13px; color:#666; }
+    :root{
+      --bg:#0f1720;
+      --card:#0b1220;
+      --muted:#98a0ad;
+      --accent:#7dd3fc;
+      --accent-2:#60a5fa;
+      --glass: rgba(255,255,255,0.03);
+      --soft:#111827;
+      --radius:12px;
+      --maxw:980px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;background:linear-gradient(180deg,#071021 0%, #07111a 100%); margin:0; color:#e6eef6;}
+    .wrap{max-width:var(--maxw); margin:28px auto; padding:28px; box-sizing:border-box;}
+    header{display:flex;align-items:center;gap:16px; margin-bottom:18px}
+    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#022;box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:var(--radius); padding:18px; box-shadow: 0 6px 30px rgba(2,6,23,0.6);}
+
+    label{display:block;font-size:13px;color:var(--muted); margin-bottom:6px}
+    textarea{width:100%;min-height:160px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:13px;resize:vertical;box-sizing:border-box}
+    .controls{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;
+      background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#022; box-shadow:0 6px 18px rgba(16,24,40,0.6)
+    }
+    .btn.secondary{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.04)}
+    .status{margin-left:auto;color:var(--muted);font-size:13px}
+
+    .download{
+      display:inline-block;padding:9px 12px;border-radius:10px;background:#1f2937;color:var(--accent);text-decoration:none;font-weight:700;border:1px solid rgba(255,255,255,0.03)
+    }
+
+    .meta{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+    .chip{background:var(--glass);padding:8px 10px;border-radius:999px;color:var(--muted);font-size:13px}
+
+    table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;background:transparent}
+    th,td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03); text-align:left}
+    thead th{color:var(--muted);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.6px}
+    tbody tr:hover td{background:rgba(255,255,255,0.01)}
+    .small{font-size:13px;color:var(--muted)}
+
+    footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
+    @media (max-width:720px){
+      header{flex-direction:row;gap:10px}
+      .status{width:100%;margin-left:0}
+    }
   </style>
 </head>
 <body>
-  <h1>Product Data Extractor</h1>
+  <div class="wrap">
+    <header>
+      <div class="logo">EX</div>
+      <div>
+        <h1>Extractor</h1>
+        <p class="lead">Paste Macy’s product links (one per line). Jobs queue & run on your laptop — results appear below.</p>
+      </div>
+      <div class="status" id="connStatus">Connecting…</div>
+    </header>
 
-  <label for="site">Select Website:</label>
-  <select id="site">
-    <option value="macys">Macy's</option>
-  </select>
+    <main class="card" role="main" aria-live="polite">
+      <label for="urls">Product URLs (one per line)</label>
+      <textarea id="urls" placeholder="https://www.macys.com/shop/product/..." aria-label="Product URLs"></textarea>
 
-  <label for="urls">Paste URLs (one per line):</label>
-  <textarea id="urls" placeholder="https://www.macys.com/...?ID=..."></textarea>
+      <div class="controls" style="margin-top:12px">
+        <button id="submitBtn" class="btn" aria-label="Submit to queue">Submit</button>
+        <a id="downloadBtn" class="download" style="display:none" download>Download CSV</a>
+        <button id="clearBtn" class="btn secondary" title="Clear URLs">Clear</button>
 
-  <div id="controls">
-    <button id="submitBtn" type="button">Submit to Queue</button>
-    <a id="downloadBtn" download>Download CSV</a>
-    <div id="status" class="small">Not connected to backend yet.</div>
+        <div class="status" id="status">Not connected</div>
+      </div>
+
+      <div class="meta" aria-hidden="false">
+        <div class="chip" id="queueInfo">Queue: 0</div>
+        <div class="chip" id="posInfo">Position: -</div>
+        <div class="chip" id="itemsInfo">Items: -</div>
+      </div>
+
+      <div id="results" style="margin-top:18px"></div>
+    </main>
+
+    <footer>
+      <span class="small">Tip: Keep <strong>ngrok</strong> + your local server running. Replace BACKEND in the script with your ngrok URL.</span>
+    </footer>
   </div>
 
-  <div id="results"></div>
-
   <script>
-  // -------------- CONFIG --------------
-  const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'; // your ngrok URL
-  // ------------------------------------
+    // ======= CONFIG =======
+    const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev '; // <-- CHANGE this to your ngrok URL
+    // ======================
 
-  // DOM refs
-  const statusEl = document.getElementById('status');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const tableContainer = document.getElementById('results');
-  const submitBtn = document.getElementById('submitBtn');
-  const urlsInput = document.getElementById('urls');
+    const statusEl = document.getElementById('status');
+    const connStatusEl = document.getElementById('connStatus');
+    const queueInfo = document.getElementById('queueInfo');
+    const posInfo = document.getElementById('posInfo');
+    const itemsInfo = document.getElementById('itemsInfo');
+    const resultsEl = document.getElementById('results');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const urlsInput = document.getElementById('urls');
 
-  // Hide download initially
-  downloadBtn.style.display = 'none';
+    let socket = null;
 
-  // Socket variable
-  let socket = null;
+    function setConnectionText(t){ connStatusEl.innerText = t; }
+    function setStatus(t){ statusEl.innerText = t; }
 
-  function connectSocket() {
-    try {
-      socket = io(BACKEND, {
-        transports: ['websocket', 'polling'],
-        secure: true,
-        timeout: 10000
-      });
-    } catch (e) {
-      console.error('Socket init error', e);
-      statusEl.innerText = 'Socket init error — check BACKEND value and ngrok.';
-      return;
-    }
-
-    socket.on('connect', () => {
-      console.log('Socket connected', socket.id);
-      statusEl.innerText = 'Socket connected. Ready to submit.';
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('Socket connect_error', err);
-      statusEl.innerText = 'Socket connection failed — make sure ngrok & backend are running.';
-      alert('Socket connection failed. Make sure your ngrok tunnel and local server are running.');
-    });
-
-    socket.on('queue_update', (payload) => {
-      // payload: { position, total, message }
-      if (!payload) return;
-      statusEl.innerText = payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`;
-    });
-
-    socket.on('extraction_complete', async (data) => {
+    function connectSocket(){
       try {
-        const rel = (data && data.downloadUrl) ? data.downloadUrl : null;
-        const fullUrl = rel ? (rel.startsWith('http') ? rel : (BACKEND + rel)) : null;
-        if (fullUrl) {
-          downloadBtn.href = fullUrl;
-          downloadBtn.style.display = 'inline-block';
-        }
-        statusEl.innerText = '✅ Extraction complete! Preparing preview...';
+        socket = io(BACKEND, { transports:['websocket','polling'], timeout:8000 });
+      } catch(e){
+        setConnectionText('Socket init error');
+        setStatus('Socket init error — check BACKEND');
+        return;
+      }
 
-        if (fullUrl) {
-          try {
-            const res = await fetch(fullUrl);
-            if (!res.ok) throw new Error('Failed to fetch CSV: ' + res.status);
-            const txt = await res.text();
-            renderCsvPreview(txt);
-            statusEl.innerText = '✅ Extraction complete — preview below. Use Download CSV to save.';
-          } catch (err) {
-            console.error('CSV preview fetch failed', err);
-            statusEl.innerText = 'Extraction complete. Click Download CSV to save the file.';
+      socket.on('connect', ()=> {
+        setConnectionText('Connected');
+        setStatus('Ready to submit');
+      });
+      socket.on('connect_error', (err)=> {
+        setConnectionText('Socket error');
+        setStatus('Socket connect error — check ngrok & server');
+        console.error('connect_error', err);
+      });
+
+      socket.on('queue_update', payload => {
+        setStatus(payload.message || `Position ${payload.position || '?'} of ${payload.total || '?'}`);
+        queueInfo.innerText = `Queue: ${payload.total || 0}`;
+        posInfo.innerText = `Position: ${payload.position || '-'}`;
+      });
+
+      socket.on('extraction_complete', async data => {
+        // server sends downloadUrl (absolute or relative)
+        const rel = data.downloadUrl || '';
+        if(!rel) { setStatus('Extraction complete (no downloadUrl)'); return; }
+        const full = rel.startsWith('http') ? rel : (BACKEND + rel);
+        downloadBtn.href = full;
+        downloadBtn.style.display = 'inline-block';
+        setStatus('Extraction complete — previewing...');
+        itemsInfo.innerText = `Items: ${data.totalItems || '-'}`;
+
+        // fetch CSV and render
+        try {
+          const res = await fetch(full);
+          if(!res.ok) throw new Error('CSV fetch failed '+res.status);
+          const txt = await res.text();
+          renderCsvPreview(txt);
+          setStatus('Preview ready • Click Download to save');
+        } catch(e){
+          console.error('Fetch CSV failed', e);
+          setStatus('Extraction complete — click Download to save file');
+        }
+      });
+    }
+
+    function csvToRows(csv){
+      const lines = csv.trim().split(/\r?\n/);
+      return lines.map(l=>{
+        // simple CSV parse: split on commas but handle quoted fields
+        const cells = [];
+        let cur = '', inQuotes = false;
+        for(let i=0;i<l.length;i++){
+          const ch = l[i];
+          if(ch === '"'){
+            if(inQuotes && l[i+1] === '"'){ cur += '"'; i++; continue; }
+            inQuotes = !inQuotes; continue;
           }
+          if(ch === ',' && !inQuotes){ cells.push(cur); cur=''; continue; }
+          cur += ch;
         }
-      } catch (err) {
-        console.error('extraction_complete handler error', err);
-      }
-    });
-
-    socket.on('error', (e) => {
-      console.error('Socket error', e);
-    });
-  }
-
-  function renderCsvPreview(csvText) {
-    if (!csvText) {
-      tableContainer.innerHTML = '<p class="small">No CSV content</p>';
-      return;
-    }
-    // naive CSV parse that handles simple quoted fields
-    const rows = csvText.trim().split(/\r?\n/).map(line => {
-      const cells = [];
-      let cur = '', inQuotes = false;
-      for (let i=0;i<line.length;i++){
-        const ch = line[i];
-        if (ch === '"' ) {
-          if (inQuotes && line[i+1] === '"') { cur += '"'; i++; continue; }
-          inQuotes = !inQuotes;
-          continue;
-        }
-        if (ch === ',' && !inQuotes) { cells.push(cur); cur=''; continue; }
-        cur += ch;
-      }
-      cells.push(cur);
-      return cells;
-    });
-
-    if (rows.length === 0) {
-      tableContainer.innerHTML = '<p class="small">CSV empty</p>';
-      return;
-    }
-
-    const table = document.createElement('table');
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    rows[0].forEach(h => {
-      const th = document.createElement('th');
-      th.innerText = (h||'').replace(/^"|"$/g,'');
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-
-    const tbody = document.createElement('tbody');
-    for (let r=1; r<Math.min(rows.length, 501); r++) {
-      const tr = document.createElement('tr');
-      rows[r].forEach(c => {
-        const td = document.createElement('td');
-        td.innerText = (c||'').replace(/^"|"$/g,'');
-        tr.appendChild(td);
+        cells.push(cur);
+        return cells;
       });
-      tbody.appendChild(tr);
     }
-    table.appendChild(tbody);
 
-    tableContainer.innerHTML = '';
-    tableContainer.appendChild(table);
-  }
+    function renderCsvPreview(csvText){
+      const rows = csvToRows(csvText);
+      if(!rows || rows.length < 1){ resultsEl.innerHTML = '<p class="small">No preview</p>'; return; }
+      const header = rows[0];
+      const body = rows.slice(1, 501); // cap to 500 rows
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const thr = document.createElement('tr');
+      header.forEach(h => { const th = document.createElement('th'); th.innerText = h.replace(/^"|"$/g,''); thr.appendChild(th); });
+      thead.appendChild(thr);
+      table.appendChild(thead);
 
-  async function submitToQueue() {
-    if (!socket || socket.disconnected) {
-      alert('Socket not connected. Make sure ngrok and the backend are running.');
-      return;
-    }
-    const raw = urlsInput.value.trim();
-    if (!raw) {
-      alert('Please paste one or more URLs (one per line).');
-      return;
-    }
-    const urls = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-    statusEl.innerText = 'Submitting...';
-
-    try {
-      const res = await fetch(BACKEND + '/queue_submit', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ urls })
+      const tbody = document.createElement('tbody');
+      body.forEach(r => {
+        const tr = document.createElement('tr');
+        r.forEach(c => {
+          const td = document.createElement('td');
+          td.innerText = (c||'').replace(/^'|^"|"$/g,'');
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
       });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error('Server returned ' + res.status + ': ' + text);
-      }
-      const json = await res.json();
-      const userId = json.userId || json.id || json.room;
-      if (userId) {
-        if (socket.connected) socket.emit('join_queue', userId);
-        else socket.once('connect', () => socket.emit('join_queue', userId));
-      }
-      statusEl.innerText = json.message || 'Submitted — waiting in queue.';
-      if (json.position) statusEl.innerText = `Position ${json.position}/${json.total || '?'}`;
-    } catch (err) {
-      console.error('Submit error', err);
-      alert('Error submitting: ' + err.message);
-      statusEl.innerText = 'Error submitting. See console.';
+      table.appendChild(tbody);
+      resultsEl.innerHTML = '';
+      resultsEl.appendChild(table);
     }
-  }
 
-  // Initialize
-  connectSocket();
-  submitBtn.addEventListener('click', (e) => { e.preventDefault(); submitToQueue(); });
+    async function submitToQueue(){
+      if(!socket || socket.disconnected){ alert('Socket not connected. Start ngrok & server.'); return; }
+      const raw = urlsInput.value.trim();
+      if(!raw){ alert('Paste one or more URLs (one per line).'); return; }
+      const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      setStatus('Submitting...');
+      try {
+        const res = await fetch(BACKEND + '/queue_submit', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ site: 'macys', urls })
+        });
+        if(!res.ok){ const t = await res.text(); throw new Error('Server: '+t); }
+        const json = await res.json();
+        setStatus(json.message || 'Submitted — waiting in queue');
+        // join our socket room so we get updates
+        const userId = json.userId || json.id || json.room;
+        if(userId) socket.emit('join_queue', userId);
+      } catch (err){
+        console.error('Submit error', err);
+        alert('Submit failed: ' + err.message);
+        setStatus('Submit failed');
+      }
+    }
 
+    submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
+    clearBtn.addEventListener('click', ()=> urlsInput.value = '');
+
+    // Init
+    connectSocket();
+
+    // Allow quick replace via console for testing:
+    window.__EXTRACTOR = { connectSocket, submitToQueue, renderCsvPreview };
   </script>
 </body>
 </html>

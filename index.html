@@ -135,7 +135,7 @@
 
   /* ===== Circular progress styles ===== */
   .progress-wrap { display:flex; align-items:center; gap:8px; margin-left:6px; }
-  .progress-circle { width:48px; height:48px; display:inline-block; opacity:0; transition:opacity .18s ease; }
+  .progress-circle { width:48px; height:48px; display:inline-block; opacity:1; transition:opacity .18s ease; }
   .progress-circle .circular { width:100%; height:100%; transform:rotate(-90deg); overflow:visible; }
   .progress-circle .bg { fill:none; stroke: rgba(255,255,255,0.06); stroke-width:3.5; }
   .progress-circle .progress { fill:none; stroke: #10b981; stroke-width:3.5; stroke-linecap:round; transition: stroke-dasharray 400ms ease, stroke 200ms; }
@@ -450,7 +450,22 @@
   updateUrlCount();
 
   // UI wiring
-  submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); startSimulatedProgress(92); });
+ submitBtn.removeEventListener && submitBtn.removeEventListener('click', submitButtonHandler, false); // safe no-op if not used
+
+function submitButtonHandler(e){
+  e.preventDefault();
+  // show progress immediately
+  if (progressWrap) {
+    progressWrap.style.opacity = '1';
+    progressWrap.setAttribute('aria-hidden','false');
+  }
+  // start simulated client-side progress (will cap around 92% until server finish)
+  if (typeof startSimulatedProgress === 'function') startSimulatedProgress(92);
+  // then proceed with original submit
+  submitToQueue();
+}
+submitBtn.addEventListener('click', submitButtonHandler);
+
   clearBtn.addEventListener('click', ()=> { urlsInput.value=''; resultsArea.style.display='none'; resultsTable.innerHTML=''; downloadBtn.style.display='none'; rowsInfo.innerText='Showing: 0 rows'; updateUrlCount(); });
 
   function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
@@ -542,3 +557,4 @@
 </script>
 </body>
 </html>
+

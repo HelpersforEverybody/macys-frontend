@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Extractor — Full Table + Horizontal Scroll</title>
+<title>Extractor — UI fixes (URL truncation, tooltips, scrollbars)</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
   :root{
@@ -58,29 +58,34 @@
   .chip{background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:999px;color:var(--muted);font-size:13px;border:1px solid rgba(255,255,255,0.02)}
 
   /* results viewport: this handles vertical + horizontal scrolling inside it */
-  .table-wrap{margin-top:18px;border-radius:12px;overflow:auto;background:var(--card-bg);border:1px solid var(--card-border);max-height:520px;padding:8px}
-  /* prevent page horizontal scroll; internal table can be wider */
-  .table-wrap::-webkit-scrollbar{height:12px;width:12px}
+  .table-wrap{margin-top:18px;border-radius:12px;background:var(--card-bg);border:1px solid var(--card-border);max-height:520px;padding:8px; overflow:auto}
+  /* ensure scrollbars are visible and usable */
+  .table-wrap{ scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.12) rgba(255,255,255,0.03); }
+  .table-wrap::-webkit-scrollbar{ height:12px; width:12px; }
+  .table-wrap::-webkit-scrollbar-track{ background: rgba(255,255,255,0.02); border-radius:6px; }
+  .table-wrap::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.12); border-radius:6px; border:2px solid rgba(0,0,0,0); }
+
   table{width:100%;border-collapse:collapse;min-width:1100px;table-layout:auto}
   thead th{position:sticky;top:0;z-index:3;background:var(--card-bg);padding:10px 12px;color:var(--muted);font-size:12px;text-transform:uppercase;border-bottom:1px solid rgba(0,0,0,0.06)}
-  tbody td{padding:10px 12px;border-bottom:1px dashed rgba(0,0,0,0.04);font-size:14px;color:var(--text);white-space:normal}
+  tbody td{padding:10px 12px;border-bottom:1px dashed rgba(0,0,0,0.04);font-size:14px;color:var(--text)}
   tbody tr:nth-child(even) td{background: rgba(0,0,0,0.015)}
   tbody tr:hover td{background: rgba(0,0,0,0.02)}
 
   /* column helpers */
   .col-sr{width:60px;white-space:nowrap}
-  .col-sku{width:200px;white-space:nowrap}
+  .col-sku{width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .col-upc{width:160px;white-space:nowrap}
-  /* IMPORTANT: URL column should NOT wrap => horizontal scrollbar appears */
-  .col-url{min-width:520px;white-space:nowrap;color:#7ec8ff;overflow:hidden;text-overflow:ellipsis}
-  .col-color{width:140px;white-space:normal}
+  /* URL column: do not wrap, show ellipsis, tooltip shows full URL */
+  .col-url{min-width:520px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#7ec8ff}
+  /* Color: no wrap, ellipsis */
+  .col-color{width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .col-size{width:90px;white-space:nowrap}
-  .col-price{width:110px;white-space:nowrap;font-weight:800}
+  /* price should NOT be bold */
+  .col-price{width:110px;white-space:nowrap;font-weight:normal}
   .col-regular{width:110px;white-space:nowrap}
   .col-avail{width:120px;white-space:nowrap}
 
   .footer-note{margin-top:14px;color:var(--muted);font-size:13px;text-align:center}
-
   @media(max-width:900px){ .col-url{min-width:420px} }
 </style>
 </head>
@@ -122,9 +127,7 @@
           <div style="font-size:13px;color:var(--muted)">Full preview — scroll horizontally or vertically</div>
         </div>
 
-        <table id="resultsTable" role="table" aria-label="Extraction results table">
-          <!-- JS injects header + body -->
-        </table>
+        <table id="resultsTable" role="table" aria-label="Extraction results table"></table>
       </div>
     </main>
 
@@ -132,11 +135,11 @@
   </div>
 
 <script>
-  // ===== CONFIG: update your ngrok URL =====
+  // ===== CONFIG: set your ngrok/backend URL =====
   const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev';
-  // =========================================
+  // =============================================
 
-  // DOM
+  // DOM refs
   const urlsInput = document.getElementById('urls');
   const submitBtn = document.getElementById('submitBtn');
   const downloadBtn = document.getElementById('downloadBtn');
@@ -185,10 +188,10 @@
     const header = rows[0];
     const thead = document.createElement('thead');
     const trh = document.createElement('tr');
+
     header.forEach(h => {
       const th = document.createElement('th');
       th.innerText = h.replace(/^"|"$/g,'');
-      // add class names for nicer widths
       const key = h.toString().toLowerCase();
       if(key.includes('sr')) th.className = 'col-sr';
       else if(key.includes('sku')) th.className = 'col-sku';
@@ -204,23 +207,45 @@
     thead.appendChild(trh);
 
     const tbody = document.createElement('tbody');
-    // append all data rows
     rows.slice(1).forEach(r => {
       const tr = document.createElement('tr');
       r.forEach((cell, idx) => {
         const td = document.createElement('td');
-        td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
-        // apply same classes by header index
+        const raw = (cell||'').replace(/^'|^"|"$/g,'');
         const h = header[idx] ? header[idx].toString().toLowerCase() : '';
-        if(h.includes('sr')) td.className = 'col-sr';
-        else if(h.includes('sku')) td.className = 'col-sku';
-        else if(h.includes('upc')) td.className = 'col-upc';
-        else if(h.includes('url')) td.className = 'col-url';
-        else if(h.includes('color')) td.className = 'col-color';
-        else if(h.includes('size')) td.className = 'col-size';
-        else if(h.includes('current')) td.className = 'col-price';
-        else if(h.includes('regular')) td.className = 'col-regular';
-        else if(h.includes('avail')) td.className = 'col-avail';
+
+        // URL column -> anchor with title + target
+        if(h.includes('url')){
+          const a = document.createElement('a');
+          a.href = raw || '#';
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.innerText = raw;
+          a.title = raw; // tooltip shows full URL on hover
+          a.style.color = ''; // keep CSS color
+          a.style.textDecoration = 'none';
+          a.style.display = 'inline-block';
+          a.style.maxWidth = '100%';
+          // apply ellipsis via parent td or class; td has col-url which handles it
+          td.appendChild(a);
+          td.className = 'col-url';
+        } else if(h.includes('color')){
+          td.innerText = raw;
+          td.title = raw;
+          td.className = 'col-color';
+        } else {
+          td.innerText = raw;
+        }
+
+        // other simple class assignment
+        if(h.includes('sr')) td.classList.add('col-sr');
+        if(h.includes('sku')) td.classList.add('col-sku');
+        if(h.includes('upc')) td.classList.add('col-upc');
+        if(h.includes('size')) td.classList.add('col-size');
+        if(h.includes('current')) td.classList.add('col-price');
+        if(h.includes('regular')) td.classList.add('col-regular');
+        if(h.includes('avail')) td.classList.add('col-avail');
+
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -232,7 +257,8 @@
 
     resultsArea.style.display = 'block';
     rowsInfo.innerText = `Showing: ${rows.length - 1} rows`;
-    // reset internal scroll so header stays visible
+
+    // make sure scrollbars are visible; reset position
     resultsArea.scrollTop = 0;
     resultsArea.scrollLeft = 0;
   }
@@ -302,7 +328,10 @@
   submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
   clearBtn.addEventListener('click', ()=> { urlsInput.value=''; resultsArea.style.display='none'; resultsTable.innerHTML=''; downloadBtn.style.display='none'; rowsInfo.innerText='Showing: 0 rows'; });
 
-  // expose for debugging
+  // helper
+  function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
+
+  // expose for debug
   window.__EXTRACTOR = { renderTableFromCsv, submitToQueue, connectSocket };
 </script>
 </body>

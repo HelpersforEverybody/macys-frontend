@@ -1,349 +1,287 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Extractor — Fixed Scrollable Table</title>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<style>
-  :root{
-    --maxw:1180px;
-    --radius:12px;
-    --muted-dark:#9aa6b8;
-    --muted-light:#475569;
-    --accent-blue:#2563eb;
-    --accent-green:#10b981;
-    --card-border: rgba(255,255,255,0.06);
-    --card-surface-dark: rgba(255,255,255,0.02);
-    --shadow: 0 12px 40px rgba(0,0,0,0.6);
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Extractor · Vibrant UI</title>
 
-  /* block page horizontal scroll completely */
-  html,body{ margin:0; height:100%; overflow-x:hidden; }
+  <!-- Socket.IO CDN -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
-  /* Themes */
-  :root[data-theme="dark"]{
-    --page-bg:#000000;
-    --page-text:#e6eef6;
-    --card-bg: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
-    --muted: var(--muted-dark);
-    --surface: rgba(255,255,255,0.01);
-    --btn-text:#fff;
-  }
-  :root[data-theme="light"]{
-    --page-bg: linear-gradient(180deg,#f6fbff 0%, #eef6ff 100%);
-    --page-text:#071021;
-    --card-bg:#ffffff;
-    --muted: var(--muted-light);
-    --surface:#f8fafc;
-    --btn-text:#022;
-  }
+  <style>
+    /* ========== Theme ========== */
+    :root{
+      --bg-1: #0f1724;
+      --bg-2: linear-gradient(180deg,#071021 0%, #082033 100%);
+      --card: rgba(255,255,255,0.03);
+      --muted: #9fb0c9;
+      --accent-1: #7c5cff;
+      --accent-2: #6be0ff;
+      --accent-3: #ff7aa2;
+      --glass: rgba(255,255,255,0.03);
+      --radius:14px;
+      --shadow: 0 8px 30px rgba(2,6,23,0.6);
+      --maxw:1100px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color-scheme: dark;
+    }
+    html,body{height:100%;margin:0;background:var(--bg-2); color:#eaf6ff;}
+    .wrap{max-width:var(--maxw); margin:36px auto;padding:22px;box-sizing:border-box;}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+    .logo{
+      width:60px;height:60px;border-radius:14px;
+      background:conic-gradient(from 200deg at 50% 50%, var(--accent-1), var(--accent-2), var(--accent-3));
+      display:flex;align-items:center;justify-content:center;font-weight:800;color:#022;box-shadow:0 10px 30px rgba(12,10,25,0.5)
+    }
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
 
-  body{ background:var(--page-bg); color:var(--page-text); -webkit-font-smoothing:antialiased; }
-  .container{ max-width:var(--maxw); margin:34px auto; padding:18px; box-sizing:border-box; }
+    /* main card */
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+    .form-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+    label{display:block;font-size:13px;color:var(--muted); margin-bottom:6px}
+    textarea{width:100%;min-height:160px;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:14px;resize:vertical;box-sizing:border-box}
+    .select{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .controls{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+    .btn{
+      display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:14px;
+      background:linear-gradient(90deg,var(--accent-1),var(--accent-2)); color:#061024; box-shadow:0 8px 22px rgba(10,10,30,0.6)
+    }
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:600}
+    .status{margin-left:auto;color:var(--muted);font-size:13px}
 
-  header{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
-  .logo{ width:56px; height:56px; border-radius:12px; background:var(--surface); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--page-text); box-shadow:var(--shadow); }
-  h1{ margin:0; font-size:20px; }
-  p.lead{ margin:0; color:var(--muted); font-size:13px; }
+    .meta{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+    .chip{background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:999px;color:var(--muted);font-size:13px;border:1px solid rgba(255,255,255,0.02)}
 
-  .main-grid{ display:grid; grid-template-columns:1fr; gap:18px; }
-  @media(min-width:1000px){ .main-grid{ grid-template-columns:1fr 320px; } }
+    /* Table area */
+    .table-wrap{
+      margin-top:18px;
+      border-radius:12px;
+      overflow:auto;
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+      border:1px solid rgba(255,255,255,0.03);
+      max-height:420px; /* vertical scroll cap */
+      position:relative;
+    }
+    table{width:100%;border-collapse:collapse;min-width:900px}
+    thead th{
+      position:sticky; top:0; z-index:2;
+      background: linear-gradient(90deg, rgba(9,12,30,0.9), rgba(9,12,30,0.85));
+      padding:12px 14px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:0.6px;border-bottom:1px solid rgba(255,255,255,0.03);
+    }
+    tbody td{padding:12px 14px;border-bottom:1px dashed rgba(255,255,255,0.03);font-size:14px;color:#dff3ff}
+    tbody tr:nth-child(even) td{background: linear-gradient(90deg, rgba(255,255,255,0.006), rgba(255,255,255,0.002));}
+    tbody tr:hover td{background: rgba(255,255,255,0.02)}
+    .col-sr{width:70px}
+    .col-sku{width:220px}
+    .col-url{max-width:540px;word-break:break-all;color:#bfe8ff;font-size:13px}
+    .col-price{font-weight:800;color:#fff}
+    .small{font-size:13px;color:var(--muted)}
 
-  .card{ background:var(--card-bg); border-radius:12px; padding:16px; border:1px solid var(--card-border); box-shadow:var(--shadow); }
-  label{ display:block; margin-bottom:8px; color:var(--muted); font-size:13px; }
-  textarea{ width:100%; min-height:140px; padding:12px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); background:var(--surface); color:var(--page-text); font-size:14px; box-sizing:border-box; resize:vertical; }
+    /* footer */
+    footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
 
-  .controls{ display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
-  .status{ margin-left:auto; color:var(--muted); font-size:13px; }
-
-  .btn{ padding:10px 16px; border-radius:10px; border:none; cursor:pointer; font-weight:700; font-size:14px; }
-  .btn-blue{ background: var(--accent-blue); color:var(--btn-text); }
-  .btn-green{ background: var(--accent-green); color:var(--btn-text); }
-  .btn-ghost{ background:transparent; border:1px solid rgba(0,0,0,0.06); color:var(--muted); font-weight:600; }
-
-  .meta-row{ margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-  .badge{ background:var(--surface); padding:6px 10px; border-radius:999px; color:var(--muted); font-weight:700; font-size:13px; }
-
-  .results-card{ margin-top:18px; border-radius:12px; padding:10px; background:var(--card-bg); border:1px solid var(--card-border); }
-
-  /* IMPORTANT: viewport handles both scroll axes; page will not expand horizontally */
-  .table-viewport{ max-height:480px; overflow:auto; border-radius:8px; background:transparent; padding-bottom:4px; }
-
-  table{
-    width:100%;
-    border-collapse:collapse;
-    table-layout: fixed; /* key: fixed layout so column widths + wrapping behave predictably */
-    min-width:900px;     /* if you want more internal horizontal scroll, increase this */
-  }
-
-  thead th{
-    position:sticky; top:0; z-index:3;
-    background:var(--card-bg);
-    padding:12px 14px; font-size:12px; color:var(--muted); text-transform:uppercase; border-bottom:1px solid rgba(255,255,255,0.03); text-align:left;
-  }
-
-  tbody td{ padding:12px 14px; border-bottom:1px dashed rgba(255,255,255,0.03); color:var(--page-text); vertical-align:top; font-size:14px; overflow-wrap: anywhere; }
-  tbody tr:nth-child(even) td{ background: rgba(255,255,255,0.01); }
-  tbody tr:hover td{ background: rgba(255,255,255,0.02); }
-
-  /* Column widths (applied to header/td via classes) */
-  th.sr, td.sr{ width:60px; min-width:60px; }
-  th.sku, td.sku{ width:200px; min-width:150px; }
-  th.upc, td.upc{ width:160px; min-width:120px; }
-  th.url, td.url{ width:1fr; /* flex-like: remaining space */ min-width:420px; }
-  th.color, td.color{ width:110px; min-width:80px; }
-  th.size, td.size{ width:90px; min-width:70px; }
-  th.current, td.current{ width:110px; min-width:90px; text-align:left; }
-  th.regular, td.regular{ width:110px; min-width:90px; text-align:left; }
-  th.avail, td.avail{ width:110px; min-width:90px; text-align:left; }
-
-  /* Ensure URL cells wrap and don't expand page */
-  td.url { white-space: normal; word-break: break-word; overflow-wrap: anywhere; color:#9ad1ff; font-size:13px; }
-
-  @media (max-width:600px){ .container{ padding:12px; } }
-  footer{ margin-top:20px; color:var(--muted); text-align:center; font-size:13px; }
-</style>
+    /* responsive tweak */
+    @media (max-width:900px){
+      .col-url{max-width:360px}
+      .table-wrap{max-height:340px}
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
+  <div class="wrap">
     <header>
       <div class="logo">EX</div>
       <div>
         <h1>Product Extractor</h1>
-        <p class="lead">Paste Macy's product links — extraction runs on your laptop. Table scrolls inside card.</p>
+        <p class="lead">Paste Macy’s product links, submit and watch your extraction queue. CSV preview shows below — table is fully scrollable.</p>
       </div>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
-        <div style="color:var(--muted);font-size:13px">Theme</div>
-        <button id="themeToggle" class="btn btn-ghost" style="padding:8px 10px;font-weight:700">Toggle</button>
-      </div>
+      <div id="connStatus" class="small" style="margin-left:auto;color:#9fb0c9">Connecting...</div>
     </header>
 
-    <div class="main-grid">
-      <div>
-        <div class="card" id="inputCard">
-          <label for="urls">Product URLs (one per line)</label>
-          <textarea id="urls" placeholder="https://www.macys.com/shop/product/..." aria-label="Product URLs"></textarea>
+    <main class="card" role="main" aria-live="polite">
+      <label for="urls">Product URLs (one per line)</label>
+      <textarea id="urls" placeholder="https://www.macys.com/shop/product/..." aria-label="Product URLs"></textarea>
 
-          <div class="controls">
-            <button id="submitBtn" class="btn btn-blue">Submit</button>
-            <button id="downloadBtn" class="btn btn-green" style="display:none" download>Download CSV</button>
-            <button id="clearBtn" class="btn btn-ghost">Clear</button>
-            <div class="status" id="status">Ready</div>
-          </div>
-
-          <div class="meta-row">
-            <div class="small">URLs:</div><div class="badge" id="urlCount">0</div>
-            <div style="margin-left:auto;color:var(--muted)">Queue: <strong id="queueInfo">0</strong> &nbsp; Position: <strong id="posInfo">-</strong> &nbsp; Items: <strong id="itemsInfo">-</strong></div>
-          </div>
-        </div>
-
-        <div class="results-card" id="resultsCard">
-          <div class="table-viewport" id="tableViewport" role="region" aria-label="Results table" style="display:none">
-            <table id="resultsTable" aria-live="polite"></table>
-          </div>
-        </div>
+      <div class="controls">
+        <button id="submitBtn" class="btn" aria-label="Submit to queue">Submit</button>
+        <a id="downloadBtn" class="btn ghost" style="display:none" download>Download CSV</a>
+        <button id="clearBtn" class="btn ghost">Clear</button>
+        <div class="status" id="status">Not connected</div>
       </div>
 
-      <aside>
-        <div class="card" style="margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div><strong>Connection</strong></div>
-            <div id="connStatus" class="small" style="color:var(--muted)">Connecting…</div>
-          </div>
-          <p class="small" style="margin-top:8px">Keep your server and ngrok running. If sockets fail use polling (see console).</p>
-        </div>
+      <div class="meta" aria-hidden="false">
+        <div class="chip" id="queueInfo">Queue: 0</div>
+        <div class="chip" id="posInfo">Position: -</div>
+        <div class="chip" id="itemsInfo">Items: -</div>
+      </div>
 
-        <div class="card">
-          <div><strong>Quick Tips</strong></div>
-          <ul class="small" style="margin:8px 0 0 18px;line-height:1.6">
-            <li>Paste one URL per line</li>
-            <li>Table preview up to 2000 rows; it scrolls inside the card</li>
-            <li>Download removes server file after transfer</li>
-          </ul>
-        </div>
-      </aside>
-    </div>
+      <div id="resultsArea" class="table-wrap" style="display:none">
+        <table id="resultsTable" role="table" aria-label="Extraction results table">
+          <!-- header will be injected -->
+        </table>
+      </div>
 
-    <footer>Table fixed — long URLs wrap and the page won't expand horizontally.</footer>
+    </main>
+
+    <footer>
+      <span class="small">Tip: keep ngrok and your local server running. If sockets fail, switch BACKEND to polling (see console).</span>
+    </footer>
   </div>
 
-<script>
-/* CONFIG - set your backend (no trailing spaces) */
-const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev';
+  <script>
+    // ======= CONFIG =======
+    const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'; // <-- set your ngrok URL here (no trailing spaces)
+    // ======================
 
-const urlsInput = document.getElementById('urls');
-const submitBtn = document.getElementById('submitBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const clearBtn = document.getElementById('clearBtn');
-const urlCount = document.getElementById('urlCount');
-const statusEl = document.getElementById('status');
-const connStatus = document.getElementById('connStatus');
-const queueInfo = document.getElementById('queueInfo');
-const posInfo = document.getElementById('posInfo');
-const itemsInfo = document.getElementById('itemsInfo');
-const resultsTable = document.getElementById('resultsTable');
-const tableViewport = document.getElementById('tableViewport');
-const themeToggle = document.getElementById('themeToggle');
+    // DOM
+    const statusEl = document.getElementById('status');
+    const connStatusEl = document.getElementById('connStatus');
+    const queueInfo = document.getElementById('queueInfo');
+    const posInfo = document.getElementById('posInfo');
+    const itemsInfo = document.getElementById('itemsInfo');
+    const resultsArea = document.getElementById('resultsArea');
+    const resultsTable = document.getElementById('resultsTable');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const urlsInput = document.getElementById('urls');
 
-function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
+    // utility
+    function setStatus(t){ statusEl.innerText = t; }
+    function setConn(t){ connStatusEl.innerText = t; }
+    function safeBackend(){ return (typeof BACKEND === 'string' ? BACKEND.trim() : BACKEND); }
 
-(function initTheme(){ const saved = localStorage.getItem('extractor_theme') || 'dark'; document.documentElement.setAttribute('data-theme', saved); })();
-themeToggle.addEventListener('click', ()=>{
-  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = cur === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('extractor_theme', next);
-});
+    // socket
+    let socket = null;
+    function connectSocket(){
+      const backend = safeBackend();
+      console.log('Socket connect to:', backend);
+      setConn('Connecting...');
+      // try websocket first; if it errors, client will fall back to polling automatically
+      try {
+        socket = io(backend, { transports:['websocket','polling'], path: '/socket.io', timeout: 10000 });
+      } catch(e){
+        console.error('Socket init error', e);
+        setConn('Socket init error');
+        setStatus('Socket error — check BACKEND');
+        return;
+      }
 
-function updateUrlCount(){ const raw = urlsInput.value.trim(); const count = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length : 0; urlCount.innerText = count; }
-urlsInput.addEventListener('input', updateUrlCount);
+      socket.on('connect', ()=>{ setConn('Connected'); setStatus('Ready'); console.log('Socket connected', socket.id); });
+      socket.on('connect_error', (err) => {
+        console.warn('Socket connect_error', err);
+        setConn('Socket error');
+        setStatus('Socket connect error — see console');
+      });
+      socket.on('error', (e)=>{ console.error('Socket error', e); setStatus('Socket error'); });
 
-function setStatus(t){ statusEl.innerText = t; }
-function setConn(t){ connStatus.innerText = t; }
+      socket.on('queue_update', payload => {
+        setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
+        queueInfo.innerText = `Queue: ${payload.total || 0}`;
+        posInfo.innerText = `Position: ${payload.position || '-'}`;
+      });
 
-/* ---------- SOCKET ------------- */
-let socket = null;
-function connectSocket(){
-  const backend = safeBackend();
-  console.log('Socket connecting to', backend);
-  setConn('Connecting…');
-  try { socket = io(backend, { transports:['websocket','polling'], path:'/socket.io', timeout:10000 }); }
-  catch(e){ console.error('Socket init error', e); setConn('Socket init error'); return; }
-
-  socket.on('connect', ()=>{ setConn('Connected'); setStatus('Ready'); });
-  socket.on('connect_error', (err)=>{ console.warn('connect_error', err); setConn('Socket error'); setStatus('Socket error'); });
-  socket.on('queue_update', payload => { setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`); queueInfo.innerText = payload.total || 0; posInfo.innerText = payload.position || '-'; });
-
-  socket.on('extraction_complete', async data => {
-    const rel = data.downloadUrl || '';
-    if(!rel){ setStatus('Extraction complete (no download URL)'); return; }
-    const full = rel.startsWith('http') ? rel : (safeBackend() + rel);
-    downloadBtn.href = full; downloadBtn.style.display = 'inline-block';
-    setStatus('Extraction complete — fetching preview...');
-    itemsInfo.innerText = data.totalItems || '-';
-    try {
-      const res = await fetch(full);
-      if(!res.ok) throw new Error('CSV fetch failed '+res.status);
-      const txt = await res.text();
-      renderTableFromCsv(txt);
-      setStatus('Preview ready — click Download to save');
-    } catch(err){ console.error('CSV fetch failed', err); setStatus('Extraction complete — click Download to save'); }
-  });
-}
-connectSocket();
-
-/* ---------- CSV rendering with column classes ---------- */
-/* We add classes per header so long URL column (td.url) wraps and doesn't expand page */
-function csvToRows(csv){
-  const lines = csv.split(/\r?\n/).filter(l => l.trim() !== '');
-  return lines.map(l => {
-    const cells = []; let cur=''; let inQ=false;
-    for(let i=0;i<l.length;i++){
-      const ch = l[i];
-      if(ch === '"'){ if(inQ && l[i+1] === '"'){ cur += '"'; i++; continue; } inQ = !inQ; continue; }
-      if(ch === ',' && !inQ){ cells.push(cur); cur=''; continue; }
-      cur += ch;
+      socket.on('extraction_complete', async data => {
+        const rel = data.downloadUrl || '';
+        const full = rel.startsWith('http') ? rel : (safeBackend() + rel);
+        downloadBtn.href = full; downloadBtn.style.display = 'inline-block';
+        setStatus('Extraction complete — fetching preview...');
+        itemsInfo.innerText = `Items: ${data.totalItems || '-'}`;
+        try {
+          const res = await fetch(full);
+          if(!res.ok) throw new Error('CSV fetch returned ' + res.status);
+          const text = await res.text();
+          renderTableFromCsv(text);
+          setStatus('Preview ready • Click Download to save');
+        } catch(err){
+          console.error('Failed to fetch CSV preview', err);
+          setStatus('Extraction complete — click Download to save file');
+        }
+      });
     }
-    cells.push(cur);
-    return cells;
-  });
-}
 
-function normaliseHeader(h){
-  return (h||'').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
-}
+    // CSV parsing (simple but handles quoted fields)
+    function csvToRows(csv){
+      const lines = csv.split(/\r?\n/).filter(l=>l.trim()!=='');
+      return lines.map(l=>{
+        const cells = []; let cur=''; let inQuotes=false;
+        for(let i=0;i<l.length;i++){
+          const ch = l[i];
+          if(ch === '"'){ if(inQuotes && l[i+1] === '"'){ cur += '"'; i++; continue;} inQuotes = !inQuotes; continue; }
+          if(ch === ',' && !inQuotes){ cells.push(cur); cur=''; continue; }
+          cur += ch;
+        }
+        cells.push(cur);
+        return cells;
+      });
+    }
 
-function headerToClass(headerName){
-  const n = normaliseHeader(headerName);
-  if(n.includes('sr') || n.includes('srno') || n.includes('srno')) return 'sr';
-  if(n.includes('sku')) return 'sku';
-  if(n.includes('upc')) return 'upc';
-  if(n.includes('url')) return 'url';
-  if(n.includes('color')) return 'color';
-  if(n.includes('size')) return 'size';
-  if(n.includes('current')) return 'current';
-  if(n.includes('regular')) return 'regular';
-  if(n.includes('avail')) return 'avail';
-  // fallback
-  return '';
-}
+    function renderTableFromCsv(csv){
+      const rows = csvToRows(csv);
+      if(!rows || rows.length===0){ resultsArea.style.display='none'; resultsTable.innerHTML=''; return; }
+      resultsArea.style.display = 'block';
+      // header
+      const header = rows[0];
+      const thead = document.createElement('thead');
+      const trh = document.createElement('tr');
+      header.forEach(h => { const th = document.createElement('th'); th.innerText = h.replace(/^"|"$/g,''); trh.appendChild(th); });
+      thead.appendChild(trh);
 
-function renderTableFromCsv(csv){
-  const rows = csvToRows(csv);
-  if(!rows || rows.length === 0){ resultsTable.innerHTML=''; tableViewport.style.display='none'; return; }
-  tableViewport.style.display = 'block';
+      // body (cap 1000 rows)
+      const tbody = document.createElement('tbody');
+      rows.slice(1, 1001).forEach(row => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+          const td = document.createElement('td');
+          td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
 
-  const header = rows[0];
-  const thead = document.createElement('thead');
-  const thr = document.createElement('tr');
+      resultsTable.innerHTML = '';
+      resultsTable.appendChild(thead);
+      resultsTable.appendChild(tbody);
 
-  const colClasses = header.map(h => headerToClass(h));
+      // nice scroll to top
+      resultsArea.scrollTop = 0;
+      resultsArea.scrollLeft = 0;
+    }
 
-  header.forEach((h, idx) => {
-    const th = document.createElement('th');
-    th.innerText = h.replace(/^"|"$/g,'');
-    if(colClasses[idx]) th.classList.add(colClasses[idx]);
-    thr.appendChild(th);
-  });
-  thead.appendChild(thr);
+    async function submitToQueue(){
+      if(!socket || socket.disconnected){ alert('Socket not connected. Start ngrok & server.'); return; }
+      const raw = urlsInput.value.trim();
+      if(!raw){ alert('Paste one or more URLs (one per line).'); return; }
+      const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      setStatus('Submitting...');
+      try {
+        const res = await fetch(safeBackend() + '/queue_submit', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ site: 'macys', urls })
+        });
+        if(!res.ok){ const t = await res.text(); throw new Error(t || 'Server error'); }
+        const json = await res.json();
+        setStatus(json.message || 'Submitted — waiting in queue');
+        const userId = json.userId || json.id || json.room;
+        if(userId) socket.emit('join_queue', userId);
+      } catch (err){
+        console.error('Submit error', err);
+        alert('Submit failed: ' + (err.message || err));
+        setStatus('Submit failed');
+      }
+    }
 
-  const tbody = document.createElement('tbody');
-  rows.slice(1, 5000).forEach(r => {
-    const tr = document.createElement('tr');
-    r.forEach((cell, idx) => {
-      const td = document.createElement('td');
-      td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
-      if(colClasses[idx]) td.classList.add(colClasses[idx]);
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
+    // wire buttons
+    submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
+    clearBtn.addEventListener('click', ()=> urlsInput.value = '');
 
-  resultsTable.innerHTML = '';
-  resultsTable.appendChild(thead);
-  resultsTable.appendChild(tbody);
+    // init
+    connectSocket();
 
-  // ensure scrolling happens inside viewport (not page)
-  tableViewport.scrollTop = 0;
-  tableViewport.scrollLeft = 0;
-}
-
-/* ---------- submit to queue ---------- */
-async function submitToQueue(){
-  if(!socket || socket.disconnected){ alert('Socket not connected. Start ngrok & server.'); return; }
-  const raw = urlsInput.value.trim();
-  if(!raw){ alert('Paste one or more URLs.'); return; }
-  const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  setStatus('Submitting...');
-  try {
-    const res = await fetch(safeBackend() + '/queue_submit', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ site:'macys', urls })
-    });
-    if(!res.ok){ const t = await res.text(); throw new Error(t || 'Server error'); }
-    const json = await res.json();
-    setStatus(json.message || 'Submitted — waiting in queue');
-    const userId = json.userId || json.id || json.room;
-    if(userId) socket.emit('join_queue', userId);
-  } catch(err){
-    console.error('Submit failed', err);
-    alert('Submit failed: ' + (err.message || err));
-    setStatus('Submit failed');
-  }
-}
-
-/* wiring */
-submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
-clearBtn.addEventListener('click', ()=> { urlsInput.value=''; updateUrlCount(); resultsTable.innerHTML=''; tableViewport.style.display='none'; downloadBtn.style.display='none'; });
-urlsInput.addEventListener('input', updateUrlCount);
-function updateUrlCount(){ const raw = urlsInput.value.trim(); const count = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length : 0; urlCount.innerText = count; }
-
-/* expose for testing */
-window.__EXTRACTOR = { renderTableFromCsv, submitToQueue, connectSocket };
-
-</script>
+    // exps
+    window.__EXTRACTOR = { connectSocket, submitToQueue, renderTableFromCsv };
+  </script>
 </body>
 </html>

@@ -3,60 +3,88 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Extractor · Minimal</title>
+  <title>Extractor · Vibrant UI</title>
 
   <!-- Socket.IO CDN -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <style>
+    /* ========== Theme ========== */
     :root{
-      --bg:#0f1720;
-      --card:#0b1220;
-      --muted:#98a0ad;
-      --accent:#7dd3fc;
-      --accent-2:#60a5fa;
+      --bg-1: #0f1724;
+      --bg-2: linear-gradient(180deg,#071021 0%, #082033 100%);
+      --card: rgba(255,255,255,0.03);
+      --muted: #9fb0c9;
+      --accent-1: #7c5cff;
+      --accent-2: #6be0ff;
+      --accent-3: #ff7aa2;
       --glass: rgba(255,255,255,0.03);
-      --soft:#111827;
-      --radius:12px;
-      --maxw:980px;
+      --radius:14px;
+      --shadow: 0 8px 30px rgba(2,6,23,0.6);
+      --maxw:1100px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color-scheme: dark;
     }
-    html,body{height:100%;background:linear-gradient(180deg,#071021 0%, #07111a 100%); margin:0; color:#e6eef6;}
-    .wrap{max-width:var(--maxw); margin:28px auto; padding:28px; box-sizing:border-box;}
-    header{display:flex;align-items:center;gap:16px; margin-bottom:18px}
-    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#022;box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+    html,body{height:100%;margin:0;background:var(--bg-2); color:#eaf6ff;}
+    .wrap{max-width:var(--maxw); margin:36px auto;padding:22px;box-sizing:border-box;}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+    .logo{
+      width:60px;height:60px;border-radius:14px;
+      background:conic-gradient(from 200deg at 50% 50%, var(--accent-1), var(--accent-2), var(--accent-3));
+      display:flex;align-items:center;justify-content:center;font-weight:800;color:#022;box-shadow:0 10px 30px rgba(12,10,25,0.5)
+    }
     h1{font-size:20px;margin:0}
     p.lead{margin:0;color:var(--muted);font-size:13px}
 
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:var(--radius); padding:18px; box-shadow: 0 6px 30px rgba(2,6,23,0.6);}
-
+    /* main card */
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+    .form-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
     label{display:block;font-size:13px;color:var(--muted); margin-bottom:6px}
-    textarea{width:100%;min-height:160px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:13px;resize:vertical;box-sizing:border-box}
+    textarea{width:100%;min-height:160px;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:14px;resize:vertical;box-sizing:border-box}
+    .select{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
     .controls{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
     .btn{
-      display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;
-      background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#022; box-shadow:0 6px 18px rgba(16,24,40,0.6)
+      display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:14px;
+      background:linear-gradient(90deg,var(--accent-1),var(--accent-2)); color:#061024; box-shadow:0 8px 22px rgba(10,10,30,0.6)
     }
-    .btn.secondary{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.04)}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:600}
     .status{margin-left:auto;color:var(--muted);font-size:13px}
 
-    .download{
-      display:inline-block;padding:9px 12px;border-radius:10px;background:#1f2937;color:var(--accent);text-decoration:none;font-weight:700;border:1px solid rgba(255,255,255,0.03)
+    .meta{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+    .chip{background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:999px;color:var(--muted);font-size:13px;border:1px solid rgba(255,255,255,0.02)}
+
+    /* Table area */
+    .table-wrap{
+      margin-top:18px;
+      border-radius:12px;
+      overflow:auto;
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+      border:1px solid rgba(255,255,255,0.03);
+      max-height:420px; /* vertical scroll cap */
+      position:relative;
     }
-
-    .meta{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
-    .chip{background:var(--glass);padding:8px 10px;border-radius:999px;color:var(--muted);font-size:13px}
-
-    table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;background:transparent}
-    th,td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03); text-align:left}
-    thead th{color:var(--muted);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.6px}
-    tbody tr:hover td{background:rgba(255,255,255,0.01)}
+    table{width:100%;border-collapse:collapse;min-width:900px}
+    thead th{
+      position:sticky; top:0; z-index:2;
+      background: linear-gradient(90deg, rgba(9,12,30,0.9), rgba(9,12,30,0.85));
+      padding:12px 14px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:0.6px;border-bottom:1px solid rgba(255,255,255,0.03);
+    }
+    tbody td{padding:12px 14px;border-bottom:1px dashed rgba(255,255,255,0.03);font-size:14px;color:#dff3ff}
+    tbody tr:nth-child(even) td{background: linear-gradient(90deg, rgba(255,255,255,0.006), rgba(255,255,255,0.002));}
+    tbody tr:hover td{background: rgba(255,255,255,0.02)}
+    .col-sr{width:70px}
+    .col-sku{width:220px}
+    .col-url{max-width:540px;word-break:break-all;color:#bfe8ff;font-size:13px}
+    .col-price{font-weight:800;color:#fff}
     .small{font-size:13px;color:var(--muted)}
 
+    /* footer */
     footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
-    @media (max-width:720px){
-      header{flex-direction:row;gap:10px}
-      .status{width:100%;margin-left:0}
+
+    /* responsive tweak */
+    @media (max-width:900px){
+      .col-url{max-width:360px}
+      .table-wrap{max-height:340px}
     }
   </style>
 </head>
@@ -65,21 +93,20 @@
     <header>
       <div class="logo">EX</div>
       <div>
-        <h1>Extractor</h1>
-        <p class="lead">Paste Macy’s product links (one per line). Jobs queue & run on your laptop — results appear below.</p>
+        <h1>Product Extractor</h1>
+        <p class="lead">Paste Macy’s product links, submit and watch your extraction queue. CSV preview shows below — table is fully scrollable.</p>
       </div>
-      <div class="status" id="connStatus">Connecting…</div>
+      <div id="connStatus" class="small" style="margin-left:auto;color:#9fb0c9">Connecting...</div>
     </header>
 
     <main class="card" role="main" aria-live="polite">
       <label for="urls">Product URLs (one per line)</label>
       <textarea id="urls" placeholder="https://www.macys.com/shop/product/..." aria-label="Product URLs"></textarea>
 
-      <div class="controls" style="margin-top:12px">
+      <div class="controls">
         <button id="submitBtn" class="btn" aria-label="Submit to queue">Submit</button>
-        <a id="downloadBtn" class="download" style="display:none" download>Download CSV</a>
-        <button id="clearBtn" class="btn secondary" title="Clear URLs">Clear</button>
-
+        <a id="downloadBtn" class="btn ghost" style="display:none" download>Download CSV</a>
+        <button id="clearBtn" class="btn ghost">Clear</button>
         <div class="status" id="status">Not connected</div>
       </div>
 
@@ -89,97 +116,99 @@
         <div class="chip" id="itemsInfo">Items: -</div>
       </div>
 
-      <div id="results" style="margin-top:18px"></div>
+      <div id="resultsArea" class="table-wrap" style="display:none">
+        <table id="resultsTable" role="table" aria-label="Extraction results table">
+          <!-- header will be injected -->
+        </table>
+      </div>
+
     </main>
 
     <footer>
-      <span class="small">Tip: Keep <strong>ngrok</strong> + your local server running. Replace BACKEND in the script with your ngrok URL.</span>
+      <span class="small">Tip: keep ngrok and your local server running. If sockets fail, switch BACKEND to polling (see console).</span>
     </footer>
   </div>
 
   <script>
-    // ======= CONFIG =======// set this exactly (no trailing space)
-const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'.trim();
-
+    // ======= CONFIG =======
+    const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'; // <-- set your ngrok URL here (no trailing spaces)
     // ======================
 
+    // DOM
     const statusEl = document.getElementById('status');
     const connStatusEl = document.getElementById('connStatus');
     const queueInfo = document.getElementById('queueInfo');
     const posInfo = document.getElementById('posInfo');
     const itemsInfo = document.getElementById('itemsInfo');
-    const resultsEl = document.getElementById('results');
+    const resultsArea = document.getElementById('resultsArea');
+    const resultsTable = document.getElementById('resultsTable');
     const downloadBtn = document.getElementById('downloadBtn');
     const submitBtn = document.getElementById('submitBtn');
     const clearBtn = document.getElementById('clearBtn');
     const urlsInput = document.getElementById('urls');
 
-    let socket = null;
-
-    function setConnectionText(t){ connStatusEl.innerText = t; }
+    // utility
     function setStatus(t){ statusEl.innerText = t; }
+    function setConn(t){ connStatusEl.innerText = t; }
+    function safeBackend(){ return (typeof BACKEND === 'string' ? BACKEND.trim() : BACKEND); }
 
+    // socket
+    let socket = null;
     function connectSocket(){
+      const backend = safeBackend();
+      console.log('Socket connect to:', backend);
+      setConn('Connecting...');
+      // try websocket first; if it errors, client will fall back to polling automatically
       try {
-        socket = io(BACKEND, { transports:['websocket','polling'], timeout:8000 });
+        socket = io(backend, { transports:['websocket','polling'], path: '/socket.io', timeout: 10000 });
       } catch(e){
-        setConnectionText('Socket init error');
-        setStatus('Socket init error — check BACKEND');
+        console.error('Socket init error', e);
+        setConn('Socket init error');
+        setStatus('Socket error — check BACKEND');
         return;
       }
 
-      socket.on('connect', ()=> {
-        setConnectionText('Connected');
-        setStatus('Ready to submit');
+      socket.on('connect', ()=>{ setConn('Connected'); setStatus('Ready'); console.log('Socket connected', socket.id); });
+      socket.on('connect_error', (err) => {
+        console.warn('Socket connect_error', err);
+        setConn('Socket error');
+        setStatus('Socket connect error — see console');
       });
-      socket.on('connect_error', (err)=> {
-        setConnectionText('Socket error');
-        setStatus('Socket connect error — check ngrok & server');
-        console.error('connect_error', err);
-      });
+      socket.on('error', (e)=>{ console.error('Socket error', e); setStatus('Socket error'); });
 
       socket.on('queue_update', payload => {
-        setStatus(payload.message || `Position ${payload.position || '?'} of ${payload.total || '?'}`);
+        setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
         queueInfo.innerText = `Queue: ${payload.total || 0}`;
         posInfo.innerText = `Position: ${payload.position || '-'}`;
       });
 
       socket.on('extraction_complete', async data => {
-        // server sends downloadUrl (absolute or relative)
         const rel = data.downloadUrl || '';
-        if(!rel) { setStatus('Extraction complete (no downloadUrl)'); return; }
-        const full = rel.startsWith('http') ? rel : (BACKEND + rel);
-        downloadBtn.href = full;
-        downloadBtn.style.display = 'inline-block';
-        setStatus('Extraction complete — previewing...');
+        const full = rel.startsWith('http') ? rel : (safeBackend() + rel);
+        downloadBtn.href = full; downloadBtn.style.display = 'inline-block';
+        setStatus('Extraction complete — fetching preview...');
         itemsInfo.innerText = `Items: ${data.totalItems || '-'}`;
-
-        // fetch CSV and render
         try {
           const res = await fetch(full);
-          if(!res.ok) throw new Error('CSV fetch failed '+res.status);
-          const txt = await res.text();
-          renderCsvPreview(txt);
+          if(!res.ok) throw new Error('CSV fetch returned ' + res.status);
+          const text = await res.text();
+          renderTableFromCsv(text);
           setStatus('Preview ready • Click Download to save');
-        } catch(e){
-          console.error('Fetch CSV failed', e);
+        } catch(err){
+          console.error('Failed to fetch CSV preview', err);
           setStatus('Extraction complete — click Download to save file');
         }
       });
     }
 
+    // CSV parsing (simple but handles quoted fields)
     function csvToRows(csv){
-      const lines = csv.trim().split(/\r?\n/);
+      const lines = csv.split(/\r?\n/).filter(l=>l.trim()!=='');
       return lines.map(l=>{
-        // simple CSV parse: split on commas but handle quoted fields
-        const cells = [];
-        let cur = '', inQuotes = false;
+        const cells = []; let cur=''; let inQuotes=false;
         for(let i=0;i<l.length;i++){
           const ch = l[i];
-          if(ch === '"'){
-            if(inQuotes && l[i+1] === '"'){ cur += '"'; i++; continue; }
-            inQuotes = !inQuotes; continue;
-          }
+          if(ch === '"'){ if(inQuotes && l[i+1] === '"'){ cur += '"'; i++; continue;} inQuotes = !inQuotes; continue; }
           if(ch === ',' && !inQuotes){ cells.push(cur); cur=''; continue; }
           cur += ch;
         }
@@ -188,31 +217,36 @@ const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'.trim();
       });
     }
 
-    function renderCsvPreview(csvText){
-      const rows = csvToRows(csvText);
-      if(!rows || rows.length < 1){ resultsEl.innerHTML = '<p class="small">No preview</p>'; return; }
+    function renderTableFromCsv(csv){
+      const rows = csvToRows(csv);
+      if(!rows || rows.length===0){ resultsArea.style.display='none'; resultsTable.innerHTML=''; return; }
+      resultsArea.style.display = 'block';
+      // header
       const header = rows[0];
-      const body = rows.slice(1, 501); // cap to 500 rows
-      const table = document.createElement('table');
       const thead = document.createElement('thead');
-      const thr = document.createElement('tr');
-      header.forEach(h => { const th = document.createElement('th'); th.innerText = h.replace(/^"|"$/g,''); thr.appendChild(th); });
-      thead.appendChild(thr);
-      table.appendChild(thead);
+      const trh = document.createElement('tr');
+      header.forEach(h => { const th = document.createElement('th'); th.innerText = h.replace(/^"|"$/g,''); trh.appendChild(th); });
+      thead.appendChild(trh);
 
+      // body (cap 1000 rows)
       const tbody = document.createElement('tbody');
-      body.forEach(r => {
+      rows.slice(1, 1001).forEach(row => {
         const tr = document.createElement('tr');
-        r.forEach(c => {
+        row.forEach(cell => {
           const td = document.createElement('td');
-          td.innerText = (c||'').replace(/^'|^"|"$/g,'');
+          td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
       });
-      table.appendChild(tbody);
-      resultsEl.innerHTML = '';
-      resultsEl.appendChild(table);
+
+      resultsTable.innerHTML = '';
+      resultsTable.appendChild(thead);
+      resultsTable.appendChild(tbody);
+
+      // nice scroll to top
+      resultsArea.scrollTop = 0;
+      resultsArea.scrollLeft = 0;
     }
 
     async function submitToQueue(){
@@ -222,34 +256,32 @@ const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'.trim();
       const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
       setStatus('Submitting...');
       try {
-        const res = await fetch(BACKEND + '/queue_submit', {
+        const res = await fetch(safeBackend() + '/queue_submit', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ site: 'macys', urls })
         });
-        if(!res.ok){ const t = await res.text(); throw new Error('Server: '+t); }
+        if(!res.ok){ const t = await res.text(); throw new Error(t || 'Server error'); }
         const json = await res.json();
         setStatus(json.message || 'Submitted — waiting in queue');
-        // join our socket room so we get updates
         const userId = json.userId || json.id || json.room;
         if(userId) socket.emit('join_queue', userId);
       } catch (err){
         console.error('Submit error', err);
-        alert('Submit failed: ' + err.message);
+        alert('Submit failed: ' + (err.message || err));
         setStatus('Submit failed');
       }
     }
 
+    // wire buttons
     submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
     clearBtn.addEventListener('click', ()=> urlsInput.value = '');
 
-    // Init
+    // init
     connectSocket();
 
-    // Allow quick replace via console for testing:
-    window.__EXTRACTOR = { connectSocket, submitToQueue, renderCsvPreview };
+    // exps
+    window.__EXTRACTOR = { connectSocket, submitToQueue, renderTableFromCsv };
   </script>
 </body>
 </html>
-
-

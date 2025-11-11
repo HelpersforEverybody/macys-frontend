@@ -3,213 +3,311 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Extractor · Vibrant UI</title>
+  <title>Extractor — Light/Dark</title>
 
-  <!-- Socket.IO CDN -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
   <style>
-    /* ========== Theme ========== */
+    /* ====== Design tokens ====== */
     :root{
-      --bg-1: #0f1724;
-      --bg-2: linear-gradient(180deg,#071021 0%, #082033 100%);
-      --card: rgba(255,255,255,0.03);
-      --muted: #9fb0c9;
-      --accent-1: #7c5cff;
-      --accent-2: #6be0ff;
-      --accent-3: #ff7aa2;
+      --card-radius:14px;
+      --card-shadow: 0 10px 30px rgba(2,6,23,0.55);
       --glass: rgba(255,255,255,0.03);
-      --radius:14px;
-      --shadow: 0 8px 30px rgba(2,6,23,0.6);
+      --muted: #6b7280;
+      --accent-1: #2563eb; /* blue */
+      --accent-2: #10b981; /* green */
+      --accent-3: #ef4444; /* red */
       --maxw:1100px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Helvetica Neue", monospace;
+      --transition: 180ms ease;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      color-scheme: dark;
     }
-    html,body{height:100%;margin:0;background:var(--bg-2); color:#eaf6ff;}
-    .wrap{max-width:var(--maxw); margin:36px auto;padding:22px;box-sizing:border-box;}
-    header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+
+    /* light theme */
+    :root[data-theme="light"]{
+      --bg: linear-gradient(180deg,#f6fbff 0%, #eef6ff 100%);
+      --page-text: #0f1724;
+      --card-bg: #ffffff;
+      --card-border: rgba(15,23,36,0.06);
+      --muted: #6b7280;
+      --surface: #f8fafc;
+      --btn-plain: #fff;
+      --btn-text: #022;
+    }
+
+    /* dark theme (default) */
+    :root[data-theme="dark"]{
+      --bg: linear-gradient(180deg,#071021 0%, #07111a 100%);
+      --page-text: #e6eef6;
+      --card-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      --card-border: rgba(255,255,255,0.03);
+      --muted: #9fb0c9;
+      --surface: rgba(255,255,255,0.02);
+      --btn-plain: #0b1220;
+      --btn-text: #e6eef6;
+    }
+
+    html,body{height:100%;margin:0;color:var(--page-text);background:var(--bg);-webkit-font-smoothing:antialiased;}
+    .container{max-width:var(--maxw);margin:36px auto;padding:22px;box-sizing:border-box;}
+
+    header{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+    .brand{display:flex;gap:12px;align-items:center}
     .logo{
-      width:60px;height:60px;border-radius:14px;
-      background:conic-gradient(from 200deg at 50% 50%, var(--accent-1), var(--accent-2), var(--accent-3));
-      display:flex;align-items:center;justify-content:center;font-weight:800;color:#022;box-shadow:0 10px 30px rgba(12,10,25,0.5)
+      width:56px;height:56px;border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--page-text);box-shadow:var(--card-shadow)
     }
     h1{font-size:20px;margin:0}
     p.lead{margin:0;color:var(--muted);font-size:13px}
 
-    /* main card */
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
-    .form-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
-    label{display:block;font-size:13px;color:var(--muted); margin-bottom:6px}
-    textarea{width:100%;min-height:160px;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:14px;resize:vertical;box-sizing:border-box}
-    .select{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-    .controls{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
-    .btn{
-      display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;border:none;cursor:pointer;font-weight:700;font-size:14px;
-      background:linear-gradient(90deg,var(--accent-1),var(--accent-2)); color:#061024; box-shadow:0 8px 22px rgba(10,10,30,0.6)
-    }
-    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:600}
+    /* Body layout: left form, right status small on wide screens */
+    .main-grid{display:grid;grid-template-columns:1fr;gap:18px}
+    @media(min-width:980px){ .main-grid{grid-template-columns: 1fr 340px;} }
+
+    /* card (form) */
+    .card{background:var(--card-bg);border-radius:var(--card-radius);padding:18px;border:1px solid var(--card-border);box-shadow:var(--card-shadow);transition:box-shadow var(--transition)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+    textarea{width:100%;min-height:150px;padding:12px;border-radius:10px;border:1px solid rgba(0,0,0,0.04);background:var(--surface);color:var(--page-text);font-size:14px;resize:vertical;box-sizing:border-box}
+    select, input[type="text"]{padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);background:var(--surface);color:var(--page-text)}
+
+    /* colorful solid buttons (no gradient) */
+    .btn{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:14px;transition:transform 140ms,var(--transition)}
+    .btn:active{transform:translateY(1px)}
+    .btn-blue{background:#2563eb;color:white} /* primary */
+    .btn-green{background:#10b981;color:white} /* success */
+    .btn-red{background:#ef4444;color:white} /* danger */
+    .btn-ghost{background:transparent;border:1px solid rgba(0,0,0,0.06);color:var(--muted);font-weight:600}
+
+    .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
     .status{margin-left:auto;color:var(--muted);font-size:13px}
 
-    .meta{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
-    .chip{background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:999px;color:var(--muted);font-size:13px;border:1px solid rgba(255,255,255,0.02)}
+    /* right panel */
+    .side{display:flex;flex-direction:column;gap:12px}
+    .panel{background:var(--card-bg);border-radius:12px;padding:12px;border:1px solid var(--card-border)}
 
-    /* Table area */
-    .table-wrap{
-      margin-top:18px;
-      border-radius:12px;
-      overflow:auto;
-      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
-      border:1px solid rgba(255,255,255,0.03);
-      max-height:420px; /* vertical scroll cap */
-      position:relative;
-    }
-    table{width:100%;border-collapse:collapse;min-width:900px}
-    thead th{
-      position:sticky; top:0; z-index:2;
-      background: linear-gradient(90deg, rgba(9,12,30,0.9), rgba(9,12,30,0.85));
-      padding:12px 14px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:0.6px;border-bottom:1px solid rgba(255,255,255,0.03);
-    }
-    tbody td{padding:12px 14px;border-bottom:1px dashed rgba(255,255,255,0.03);font-size:14px;color:#dff3ff}
-    tbody tr:nth-child(even) td{background: linear-gradient(90deg, rgba(255,255,255,0.006), rgba(255,255,255,0.002));}
-    tbody tr:hover td{background: rgba(255,255,255,0.02)}
-    .col-sr{width:70px}
-    .col-sku{width:220px}
-    .col-url{max-width:540px;word-break:break-all;color:#bfe8ff;font-size:13px}
-    .col-price{font-weight:800;color:#fff}
     .small{font-size:13px;color:var(--muted)}
 
-    /* footer */
-    footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
+    /* url count badge */
+    .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:var(--surface);color:var(--muted);font-weight:700;font-size:13px}
 
-    /* responsive tweak */
-    @media (max-width:900px){
-      .col-url{max-width:360px}
-      .table-wrap{max-height:340px}
-    }
+    /* results table area: different background, scrollable */
+    .results-wrap{background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00)); border-radius:12px; padding:12px; border:1px solid var(--card-border); overflow:hidden}
+    .table-viewport{max-height:480px; overflow:auto; border-radius:8px; background:transparent}
+    table{width:100%;border-collapse:collapse;min-width:900px}
+    thead th{position:sticky; top:0; background:var(--card-bg); color:var(--muted); padding:12px 14px; text-transform:uppercase; font-size:12px; letter-spacing:0.6px; border-bottom:1px solid rgba(0,0,0,0.06)}
+    tbody td{padding:12px 14px;border-bottom:1px dashed rgba(0,0,0,0.04);font-size:14px;color:var(--page-text)}
+    tbody tr:nth-child(even) td{background: rgba(0,0,0,0.01)}
+    tbody tr:hover td{background: rgba(0,0,0,0.03)}
+    .sr{width:70px; text-align:left; color:var(--muted)}
+    .sku{width:220px}
+    .urlcell{max-width:560px;word-break:break-all;color:#2563eb}
+    .price{font-weight:800;color:#111827}
+    .price-dark{font-weight:800;color:#e6eef6}
+
+    footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+
+    /* toggle switch */
+    .toggle{display:inline-flex;align-items:center;gap:8px}
+    .switch{width:46px;height:26px;background:rgba(0,0,0,0.08);border-radius:999px;position:relative;cursor:pointer}
+    .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:white;transition:left 180ms}
+    :root[data-theme="dark"] .switch{background:rgba(255,255,255,0.06)}
+    :root[data-theme="light"] .switch{background:rgba(2,6,23,0.06)}
+    :root[data-theme="light"] .knob{left:23px}
+    :root[data-theme="dark"] .knob{left:3px}
+
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="container">
     <header>
-      <div class="logo">EX</div>
-      <div>
-        <h1>Product Extractor</h1>
-        <p class="lead">Paste Macy’s product links, submit and watch your extraction queue. CSV preview shows below — table is fully scrollable.</p>
+      <div class="brand">
+        <div class="logo">EX</div>
+        <div>
+          <h1>Product Extractor</h1>
+          <p class="lead">Paste Macy’s product links. Jobs run on your laptop — preview & download CSV here.</p>
+        </div>
       </div>
-      <div id="connStatus" class="small" style="margin-left:auto;color:#9fb0c9">Connecting...</div>
+
+      <div style="margin-left:auto;display:flex;gap:12px;align-items:center">
+        <div class="small">Theme</div>
+        <div class="toggle" id="themeToggleWrap" title="Toggle theme">
+          <div class="switch" id="themeSwitch"><div class="knob"></div></div>
+        </div>
+      </div>
     </header>
 
-    <main class="card" role="main" aria-live="polite">
-      <label for="urls">Product URLs (one per line)</label>
-      <textarea id="urls" placeholder="https://www.macys.com/shop/product/..." aria-label="Product URLs"></textarea>
+    <div class="main-grid">
+      <!-- LEFT: form and results -->
+      <div>
+        <div class="card">
+          <label for="urls">Product URLs (one per line)</label>
+          <textarea id="urls" placeholder="https://www.macys.com/shop/product/..." aria-label="Product URLs"></textarea>
 
-      <div class="controls">
-        <button id="submitBtn" class="btn" aria-label="Submit to queue">Submit</button>
-        <a id="downloadBtn" class="btn ghost" style="display:none" download>Download CSV</a>
-        <button id="clearBtn" class="btn ghost">Clear</button>
-        <div class="status" id="status">Not connected</div>
+          <div class="controls">
+            <button id="submitBtn" class="btn btn-blue">Submit</button>
+            <button id="downloadBtn" class="btn btn-green" style="display:none" download>Download CSV</button>
+            <button id="clearBtn" class="btn btn-ghost">Clear</button>
+            <div class="status" id="status">Not connected</div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <div class="small">URLs:</div>
+            <div class="badge" id="urlCount">0</div>
+            <div class="small" style="margin-left:auto">Queue: <span id="queueInfo">0</span></div>
+            <div class="small">Position: <strong id="posInfo">-</strong></div>
+            <div class="small">Items: <strong id="itemsInfo">-</strong></div>
+          </div>
+        </div>
+
+        <div class="results-wrap" style="margin-top:16px">
+          <div class="table-viewport" id="tableViewport" role="region" aria-label="Results table">
+            <table id="resultsTable" aria-live="polite">
+              <!-- injected -->
+            </table>
+          </div>
+        </div>
       </div>
 
-      <div class="meta" aria-hidden="false">
-        <div class="chip" id="queueInfo">Queue: 0</div>
-        <div class="chip" id="posInfo">Position: -</div>
-        <div class="chip" id="itemsInfo">Items: -</div>
-      </div>
+      <!-- RIGHT: info panel -->
+      <aside class="side">
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><strong>Connection</strong></div>
+            <div class="small" id="connStatus">Connecting...</div>
+          </div>
+          <p class="small" style="margin-top:8px">Make sure your local server and ngrok are running. If socket fails, check console and use polling fallback.</p>
+        </div>
 
-      <div id="resultsArea" class="table-wrap" style="display:none">
-        <table id="resultsTable" role="table" aria-label="Extraction results table">
-          <!-- header will be injected -->
-        </table>
-      </div>
-
-    </main>
+        <div class="panel">
+          <div><strong>Quick Tips</strong></div>
+          <ul class="small" style="margin:8px 0 0 18px">
+            <li>Paste one URL per line</li>
+            <li>CSV preview shows up to 1000 rows</li>
+            <li>Download removes file from server after transfer</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
 
     <footer>
-      <span class="small">Tip: keep ngrok and your local server running. If sockets fail, switch BACKEND to polling (see console).</span>
+      <div class="small">UI by Assistant · change colors or request variants (sunset / forest / light).</div>
     </footer>
   </div>
 
   <script>
-    // ======= CONFIG =======
-    const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'; // <-- set your ngrok URL here (no trailing spaces)
-    // ======================
+    // ===== CONFIG =====
+    const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'; // set to your ngrok URL - no trailing spaces
+    // =============
 
-    // DOM
+    // Theme init
+    (function initTheme(){
+      const saved = localStorage.getItem('extractor_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      // set initial knob position via CSS rooted in data-theme
+    })();
+
+    const urlsInput = document.getElementById('urls');
+    const submitBtn = document.getElementById('submitBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const clearBtn = document.getElementById('clearBtn');
     const statusEl = document.getElementById('status');
-    const connStatusEl = document.getElementById('connStatus');
+    const connStatus = document.getElementById('connStatus');
     const queueInfo = document.getElementById('queueInfo');
     const posInfo = document.getElementById('posInfo');
     const itemsInfo = document.getElementById('itemsInfo');
-    const resultsArea = document.getElementById('resultsArea');
+    const urlCount = document.getElementById('urlCount');
     const resultsTable = document.getElementById('resultsTable');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const urlsInput = document.getElementById('urls');
+    const tableViewport = document.getElementById('tableViewport');
 
-    // utility
-    function setStatus(t){ statusEl.innerText = t; }
-    function setConn(t){ connStatusEl.innerText = t; }
-    function safeBackend(){ return (typeof BACKEND === 'string' ? BACKEND.trim() : BACKEND); }
+    // URL counter update
+    function updateUrlCount(){
+      const raw = urlsInput.value.trim();
+      const count = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length : 0;
+      urlCount.innerText = count;
+    }
+    urlsInput.addEventListener('input', updateUrlCount);
 
-    // socket
+    // Theme toggle wiring
+    const themeSwitch = document.getElementById('themeSwitch');
+    document.getElementById('themeToggleWrap').addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('extractor_theme', next);
+    });
+
+    // Socket logic (robust)
+    function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
     let socket = null;
     function connectSocket(){
       const backend = safeBackend();
-      console.log('Socket connect to:', backend);
-      setConn('Connecting...');
-      // try websocket first; if it errors, client will fall back to polling automatically
+      console.log('Attempting socket connect to', backend);
+      connStatus.innerText = 'Connecting...';
+      statusEl.innerText = 'Connecting socket...';
+
       try {
         socket = io(backend, { transports:['websocket','polling'], path: '/socket.io', timeout: 10000 });
-      } catch(e){
-        console.error('Socket init error', e);
-        setConn('Socket init error');
-        setStatus('Socket error — check BACKEND');
+      } catch (e){
+        console.error('Socket init failed', e);
+        connStatus.innerText = 'Socket init error';
+        statusEl.innerText = 'Socket init error';
         return;
       }
 
-      socket.on('connect', ()=>{ setConn('Connected'); setStatus('Ready'); console.log('Socket connected', socket.id); });
+      socket.on('connect', ()=> {
+        connStatus.innerText = 'Connected';
+        statusEl.innerText = 'Ready';
+        console.log('Socket connected', socket.id);
+      });
+
       socket.on('connect_error', (err) => {
         console.warn('Socket connect_error', err);
-        setConn('Socket error');
-        setStatus('Socket connect error — see console');
+        connStatus.innerText = 'Socket error';
+        statusEl.innerText = 'Socket connect error — see console';
       });
-      socket.on('error', (e)=>{ console.error('Socket error', e); setStatus('Socket error'); });
 
       socket.on('queue_update', payload => {
-        setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
-        queueInfo.innerText = `Queue: ${payload.total || 0}`;
-        posInfo.innerText = `Position: ${payload.position || '-'}`;
+        statusEl.innerText = payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`;
+        queueInfo.innerText = payload.total || 0;
+        posInfo.innerText = payload.position || '-';
       });
 
       socket.on('extraction_complete', async data => {
         const rel = data.downloadUrl || '';
+        if (!rel) {
+          statusEl.innerText = 'Extraction complete (no download URL)';
+          return;
+        }
         const full = rel.startsWith('http') ? rel : (safeBackend() + rel);
-        downloadBtn.href = full; downloadBtn.style.display = 'inline-block';
-        setStatus('Extraction complete — fetching preview...');
-        itemsInfo.innerText = `Items: ${data.totalItems || '-'}`;
+        downloadBtn.href = full;
+        downloadBtn.style.display = 'inline-block';
+        statusEl.innerText = 'Extraction complete — fetching preview...';
+        itemsInfo.innerText = data.totalItems || '-';
         try {
           const res = await fetch(full);
-          if(!res.ok) throw new Error('CSV fetch returned ' + res.status);
+          if (!res.ok) throw new Error('CSV fetch failed ' + res.status);
           const text = await res.text();
           renderTableFromCsv(text);
-          setStatus('Preview ready • Click Download to save');
-        } catch(err){
-          console.error('Failed to fetch CSV preview', err);
-          setStatus('Extraction complete — click Download to save file');
+          statusEl.innerText = 'Preview ready — click Download to save';
+        } catch (err) {
+          console.error('CSV fetch error', err);
+          statusEl.innerText = 'Extraction complete — click Download to save file';
         }
+      });
+
+      socket.on('error', e => {
+        console.error('Socket error', e);
+        connStatus.innerText = 'Socket error';
       });
     }
 
-    // CSV parsing (simple but handles quoted fields)
+    // CSV parsing
     function csvToRows(csv){
       const lines = csv.split(/\r?\n/).filter(l=>l.trim()!=='');
       return lines.map(l=>{
-        const cells = []; let cur=''; let inQuotes=false;
-        for(let i=0;i<l.length;i++){
+        const cells = []; let cur=''; let inQ=false;
+        for (let i=0;i<l.length;i++){
           const ch = l[i];
-          if(ch === '"'){ if(inQuotes && l[i+1] === '"'){ cur += '"'; i++; continue;} inQuotes = !inQuotes; continue; }
-          if(ch === ',' && !inQuotes){ cells.push(cur); cur=''; continue; }
+          if (ch === '"'){ if (inQ && l[i+1] === '"'){ cur += '"'; i++; continue } inQ = !inQ; continue; }
+          if (ch === ',' && !inQ){ cells.push(cur); cur=''; continue; }
           cur += ch;
         }
         cells.push(cur);
@@ -219,23 +317,22 @@
 
     function renderTableFromCsv(csv){
       const rows = csvToRows(csv);
-      if(!rows || rows.length===0){ resultsArea.style.display='none'; resultsTable.innerHTML=''; return; }
-      resultsArea.style.display = 'block';
-      // header
+      if (!rows || rows.length === 0) { resultsTable.innerHTML = ''; tableViewport.style.display='none'; return; }
+      tableViewport.style.display = 'block';
+
       const header = rows[0];
       const thead = document.createElement('thead');
-      const trh = document.createElement('tr');
-      header.forEach(h => { const th = document.createElement('th'); th.innerText = h.replace(/^"|"$/g,''); trh.appendChild(th); });
-      thead.appendChild(trh);
+      const hr = document.createElement('tr');
+      header.forEach(h => {
+        const th = document.createElement('th'); th.innerText = h.replace(/^"|"$/g,''); hr.appendChild(th);
+      });
+      thead.appendChild(hr);
 
-      // body (cap 1000 rows)
       const tbody = document.createElement('tbody');
-      rows.slice(1, 1001).forEach(row => {
+      rows.slice(1, 1001).forEach(r => {
         const tr = document.createElement('tr');
-        row.forEach(cell => {
-          const td = document.createElement('td');
-          td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
-          tr.appendChild(td);
+        r.forEach(cell => {
+          const td = document.createElement('td'); td.innerText = (cell||'').replace(/^'|^"|"$/g,''); tr.appendChild(td);
         });
         tbody.appendChild(tr);
       });
@@ -244,43 +341,46 @@
       resultsTable.appendChild(thead);
       resultsTable.appendChild(tbody);
 
-      // nice scroll to top
-      resultsArea.scrollTop = 0;
-      resultsArea.scrollLeft = 0;
+      // scroll to top-left
+      tableViewport.scrollTop = 0;
+      tableViewport.scrollLeft = 0;
     }
 
+    // Submit queue
     async function submitToQueue(){
-      if(!socket || socket.disconnected){ alert('Socket not connected. Start ngrok & server.'); return; }
+      if (!socket || socket.disconnected) { alert('Socket not connected. Start ngrok and server.'); return; }
       const raw = urlsInput.value.trim();
-      if(!raw){ alert('Paste one or more URLs (one per line).'); return; }
+      if (!raw) { alert('Paste one or more URLs.'); return; }
       const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      setStatus('Submitting...');
+      statusEl.innerText = 'Submitting...';
       try {
         const res = await fetch(safeBackend() + '/queue_submit', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ site: 'macys', urls })
         });
-        if(!res.ok){ const t = await res.text(); throw new Error(t || 'Server error'); }
+        if (!res.ok) { const t = await res.text(); throw new Error(t || 'Server error'); }
         const json = await res.json();
-        setStatus(json.message || 'Submitted — waiting in queue');
+        statusEl.innerText = json.message || 'Submitted — waiting in queue';
         const userId = json.userId || json.id || json.room;
-        if(userId) socket.emit('join_queue', userId);
-      } catch (err){
-        console.error('Submit error', err);
+        if (userId) socket.emit('join_queue', userId);
+      } catch (err) {
+        console.error('Submit failed', err);
         alert('Submit failed: ' + (err.message || err));
-        setStatus('Submit failed');
+        statusEl.innerText = 'Submit failed';
       }
     }
 
-    // wire buttons
+    // button wiring
     submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
-    clearBtn.addEventListener('click', ()=> urlsInput.value = '');
+    clearBtn.addEventListener('click', () => { urlsInput.value = ''; updateUrlCount(); resultsTable.innerHTML=''; tableViewport.style.display='none'; downloadBtn.style.display='none'; });
+    urlsInput.addEventListener('input', updateUrlCount);
 
     // init
+    updateUrlCount();
     connectSocket();
 
-    // exps
+    // expose for console
     window.__EXTRACTOR = { connectSocket, submitToQueue, renderTableFromCsv };
   </script>
 </body>

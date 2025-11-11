@@ -1,154 +1,154 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Extractor — Tight Scrollable Table</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Extractor — Scrollable Table + Theme</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+  /* ===== tokens ===== */
+  :root{
+    --maxw:1180px;
+    --radius:12px;
+    --muted-dark:#9aa6b8;
+    --muted-light:#475569;
+    --accent-blue:#2563eb;
+    --accent-green:#10b981;
+    --card-border: rgba(255,255,255,0.06);
+    --card-surface-dark: rgba(255,255,255,0.02);
+    --shadow: 0 12px 40px rgba(0,0,0,0.6);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  }
 
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  /* page-level - force no horizontal scroll */
+  html,body{
+    margin:0;
+    height:100%;
+    overflow-x:hidden; /* critical: page must not scroll horizontally */
+  }
 
-  <style>
-    /* ===== Global/layout ===== */
-    :root{
-      --maxw:1100px;
-      --radius:12px;
-      --muted: #9aa6b8;
-      --accent-blue: #2563eb;
-      --accent-green: #10b981;
-      --danger: #ef4444;
-      --card-border: rgba(255,255,255,0.06);
-      --card-surface: rgba(255,255,255,0.02);
-      --shadow: 0 12px 40px rgba(2,6,23,0.6);
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-    }
+  /* THEMES: default dark (pure black bg) */
+  :root[data-theme="dark"]{
+    --page-bg: #000000; /* pure black */
+    --page-text: #e6eef6;
+    --card-bg: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+    --muted: var(--muted-dark);
+    --surface: rgba(255,255,255,0.01);
+    --btn-text: #fff;
+  }
 
-    /* FORCE: no horizontal page scroll ever */
-    html, body {
-      margin: 0;
-      height: 100%;
-      overflow-x: hidden; /* IMPORTANT: prevents page horizontal scroll */
-      background: #000000; /* pure black background per your request */
-      color: #e6eef6;
-      -webkit-font-smoothing:antialiased;
-    }
+  /* light theme */
+  :root[data-theme="light"]{
+    --page-bg: linear-gradient(180deg,#f6fbff 0%, #eef6ff 100%);
+    --page-text: #071021;
+    --card-bg: #ffffff;
+    --muted: var(--muted-light);
+    --surface: #f8fafc;
+    --btn-text: #022;
+  }
 
-    .container {
-      max-width: var(--maxw);
-      margin: 36px auto;
-      padding: 20px;
-      box-sizing: border-box;
-    }
+  body{
+    background: var(--page-bg);
+    color: var(--page-text);
+    -webkit-font-smoothing:antialiased;
+  }
 
-    header { display:flex; align-items:center; gap:12px; margin-bottom: 18px; }
-    .logo { width:56px; height:56px; border-radius:12px; background:#111; display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; box-shadow:0 10px 30px rgba(0,0,0,0.6); }
-    h1 { margin:0; font-size:20px; }
-    p.lead { margin:0; color:var(--muted); font-size:13px; }
+  .container{ max-width:var(--maxw); margin:34px auto; padding:18px; box-sizing:border-box; }
 
-    /* grid layout */
-    .main-grid { display:grid; grid-template-columns: 1fr; gap:18px; }
-    @media(min-width:980px){ .main-grid{ grid-template-columns: 1fr 320px; } }
+  header{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .logo{ width:56px; height:56px; border-radius:12px; background:var(--surface); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--page-text); box-shadow:var(--shadow); }
+  h1{ margin:0; font-size:20px; }
+  p.lead{ margin:0; color:var(--muted); font-size:13px; }
 
-    /* form card */
-    .card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border-radius: 12px;
-      padding:16px;
-      border:1px solid var(--card-border);
-      box-shadow: var(--shadow);
-    }
-    label{ display:block; margin-bottom:8px; color:var(--muted); font-size:13px; }
-    textarea{ width:100%; min-height:150px; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background: rgba(255,255,255,0.01); color: #eaf6ff; font-size:14px; box-sizing:border-box; resize:vertical; }
-    .controls{ display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+  /* grid */
+  .main-grid{ display:grid; grid-template-columns:1fr; gap:18px; }
+  @media(min-width:1000px){ .main-grid{ grid-template-columns: 1fr 320px; } }
 
-    /* buttons (solid, no gradient) */
-    .btn{ padding:10px 16px; border-radius:10px; border:none; cursor:pointer; font-weight:700; font-size:14px; }
-    .btn-blue{ background: var(--accent-blue); color:white; }
-    .btn-green{ background: var(--accent-green); color:white; }
-    .btn-ghost{ background: transparent; border:1px solid rgba(255,255,255,0.04); color: var(--muted); }
+  /* form card */
+  .card{
+    background: var(--card-bg);
+    border-radius:12px;
+    padding:16px;
+    border:1px solid var(--card-border);
+    box-shadow: var(--shadow);
+  }
+  label{ display:block; margin-bottom:8px; color:var(--muted); font-size:13px; }
+  textarea{ width:100%; min-height:140px; padding:12px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); background:var(--surface); color:var(--page-text); font-size:14px; box-sizing:border-box; resize:vertical; }
+  .controls{ display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+  .status{ margin-left:auto; color:var(--muted); font-size:13px; }
 
-    .status { margin-left:auto; color:var(--muted); font-size:13px; }
+  /* buttons (solid colors, no gradient) */
+  .btn{ padding:10px 16px; border-radius:10px; border:none; cursor:pointer; font-weight:700; font-size:14px; }
+  .btn-blue{ background: var(--accent-blue); color:var(--btn-text); }
+  .btn-green{ background: var(--accent-green); color:var(--btn-text); }
+  .btn-ghost{ background: transparent; border:1px solid rgba(0,0,0,0.06); color:var(--muted); font-weight:600; }
 
-    .meta-row { margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    .badge{ background: rgba(255,255,255,0.02); padding:6px 10px; border-radius:999px; color:var(--muted); font-weight:700; }
+  .meta-row{ margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .badge{ background: var(--surface); padding:6px 10px; border-radius:999px; color:var(--muted); font-weight:700; font-size:13px; }
 
-    /* results area: different bg and scroll behaviour */
-    .results-card {
-      margin-top:18px;
-      border-radius:12px;
-      padding:12px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
-      border:1px solid var(--card-border);
-    }
+  /* results card: DIFFERENT FROM PAGE BG (still subtle) */
+  .results-card{ margin-top:18px; border-radius:12px; padding:10px; background:var(--card-bg); border:1px solid var(--card-border); }
 
-    /* TABLE VIEWPORT: keeps the table inside a scroll box */
-    .table-viewport {
-      max-height:480px; /* vertical scroll */
-      overflow: auto;   /* both horizontal and vertical scroll inside this box */
-      border-radius:8px;
-      position:relative;
-      background: transparent;
-    }
+  /* TABLE VIEWPORT: internal scrolling only */
+  .table-viewport{
+    max-height:480px;        /* vertical scroll cap */
+    overflow:auto;           /* both horizontal & vertical inside */
+    border-radius:8px;
+    background: transparent;
+    padding-bottom:4px;
+  }
 
-    table {
-      width:100%;
-      border-collapse:collapse;
-      min-width:1200px; /* large table width causes horizontal scroll inside .table-viewport, page won't expand */
-      table-layout: auto;
-    }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:1100px;        /* if many columns, horizontal scrollbar appears inside viewport */
+    table-layout:auto;
+  }
 
-    thead th {
-      position: sticky;
-      top: 0;
-      background: rgba(0,0,0,0.85);
-      color: var(--muted);
-      padding:12px 14px;
-      font-size:12px;
-      text-transform:uppercase;
-      border-bottom:1px solid rgba(255,255,255,0.03);
-      z-index:2;
-      text-align:left;
-    }
+  thead th{
+    position:sticky; top:0; z-index:3;
+    background: var(--card-bg);
+    padding:12px 14px; font-size:12px; color:var(--muted); text-transform:uppercase; border-bottom:1px solid rgba(255,255,255,0.03);
+    text-align:left;
+  }
 
-    tbody td {
-      padding:12px 14px;
-      border-bottom:1px dashed rgba(255,255,255,0.03);
-      color: #e6eef6;
-      vertical-align:top;
-      font-size:14px;
-    }
+  tbody td{ padding:12px 14px; border-bottom:1px dashed rgba(255,255,255,0.03); color:var(--page-text); vertical-align:top; font-size:14px; }
+  tbody tr:nth-child(even) td{ background: rgba(255,255,255,0.01); }
+  tbody tr:hover td{ background: rgba(255,255,255,0.02); }
 
-    tbody tr:nth-child(even) td { background: rgba(255,255,255,0.01); }
-    tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  .sr{ width:70px; color:var(--muted); }
+  .sku{ width:220px; }
+  .upc{ width:180px; color:var(--muted); }
+  .urlcell{ max-width:760px; white-space:normal; word-break:break-word; color:#9ad1ff; font-size:13px; }
+  .colorcell{ width:120px; }
+  .sizecell{ width:80px; text-align:left; }
+  .pricecell{ width:120px; font-weight:800; color:var(--page-text); }
 
-    /* cell classes */
-    .sr { width:70px; color:var(--muted); }
-    .sku { width:220px; }
-    .upc { width:180px; color:var(--muted); }
-    .urlcell { max-width:760px; /* prevents long URL from forcing width outside viewport */ white-space: normal; word-break: break-word; color:#9ad1ff; font-size:13px; }
-    .colorcell { width:120px; }
-    .sizecell { width:80px; text-align:left; }
-    .pricecell { width:120px; font-weight:800; color:#fff; }
+  /* ensure page vertical scrollbar only; hide any accidental horizontal overflow */
+  @media (max-width:600px){ .container{ padding:12px; } }
 
-    /* hide native page horizontal scrollbar on small screens (extra safety) */
-    @media (max-width:600px){ .container { padding:12px } }
-
-    footer { margin-top:26px; color:var(--muted); text-align:center; font-size:13px; }
-  </style>
+  footer{ margin-top:20px; color:var(--muted); text-align:center; font-size:13px; }
+</style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" role="main">
     <header>
       <div class="logo">EX</div>
       <div>
         <h1>Product Extractor</h1>
-        <p class="lead">Paste Macy’s product links — extraction runs on your laptop. Table is now scrollable inside the card.</p>
+        <p class="lead">Paste Macy's product links — extraction runs on your laptop. Table scrolls inside card.</p>
       </div>
-      <div style="margin-left:auto" class="status" id="connStatus">Connecting…</div>
+
+      <!-- Theme toggle -->
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <div style="color:var(--muted);font-size:13px">Theme</div>
+        <button id="themeToggle" class="btn btn-ghost" style="padding:8px 10px;font-weight:700">Toggle</button>
+      </div>
     </header>
 
     <div class="main-grid">
       <div>
-        <div class="card">
+        <div class="card" id="inputCard">
           <label for="urls">Product URLs (one per line)</label>
           <textarea id="urls" placeholder="https://www.macys.com/shop/product/..." aria-label="Product URLs"></textarea>
 
@@ -160,17 +160,14 @@
           </div>
 
           <div class="meta-row">
-            <div class="small">URLs:</div>
-            <div class="badge" id="urlCount">0</div>
-            <div style="margin-left:auto" class="small">Queue: <strong id="queueInfo">0</strong> &nbsp; Position: <strong id="posInfo">-</strong> &nbsp; Items: <strong id="itemsInfo">-</strong></div>
+            <div class="small">URLs:</div><div class="badge" id="urlCount">0</div>
+            <div style="margin-left:auto;color:var(--muted)">Queue: <strong id="queueInfo">0</strong> &nbsp; Position: <strong id="posInfo">-</strong> &nbsp; Items: <strong id="itemsInfo">-</strong></div>
           </div>
         </div>
 
-        <div class="results-card">
-          <div class="table-viewport" id="tableViewport" role="region" aria-label="Results table">
-            <table id="resultsTable" aria-live="polite">
-              <!-- injected -->
-            </table>
+        <div class="results-card" id="resultsCard">
+          <div class="table-viewport" id="tableViewport" role="region" aria-label="Results table" style="display:none">
+            <table id="resultsTable" aria-live="polite"></table>
           </div>
         </div>
       </div>
@@ -179,205 +176,186 @@
         <div class="card" style="margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div><strong>Connection</strong></div>
-            <div id="connSmall" class="small">—</div>
+            <div id="connStatus" class="small" style="color:var(--muted)">Connecting…</div>
           </div>
-          <p class="small" style="margin-top:8px">Keep your server & ngrok running. If sockets don't work use polling fallback (check console).</p>
+          <p class="small" style="margin-top:8px">Keep your server and ngrok running. If sockets fail use polling (see console).</p>
         </div>
 
         <div class="card">
           <div><strong>Quick Tips</strong></div>
           <ul class="small" style="margin:8px 0 0 18px;line-height:1.6">
-            <li>Paste one product URL per line</li>
-            <li>Table preview is inside the card and scrolls independently</li>
-            <li>Download will remove the CSV from the server after transfer</li>
+            <li>Paste one URL per line</li>
+            <li>Table preview up to 2000 rows; it's scrollable</li>
+            <li>Download removes server file after transfer</li>
           </ul>
         </div>
       </aside>
     </div>
 
-    <footer>UI tweaks applied — table stays inside a scroll box and page won't scroll horizontally.</footer>
+    <footer>UI updated — table scrolls inside card, page only scrolls vertically, theme toggle uses black dark background.</footer>
   </div>
 
-  <script>
-    // ===== CONFIG =====
-    const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev'; // set your ngrok URL (no trailing space)
-    // ==================
+<script>
+/* ===== CONFIG: set your backend (no trailing spaces) ===== */
+const BACKEND = 'https://synonymous-julie-trilaterally.ngrok-free.dev';
+/* ======================================================= */
 
-    // DOM references
-    const urlsInput = document.getElementById('urls');
-    const submitBtn = document.getElementById('submitBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const urlCount = document.getElementById('urlCount');
-    const statusEl = document.getElementById('status');
-    const connStatus = document.getElementById('connStatus');
-    const connSmall = document.getElementById('connSmall');
-    const queueInfo = document.getElementById('queueInfo');
-    const posInfo = document.getElementById('posInfo');
-    const itemsInfo = document.getElementById('itemsInfo');
-    const resultsTable = document.getElementById('resultsTable');
-    const tableViewport = document.getElementById('tableViewport');
+const urlsInput = document.getElementById('urls');
+const submitBtn = document.getElementById('submitBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const clearBtn = document.getElementById('clearBtn');
+const urlCount = document.getElementById('urlCount');
+const statusEl = document.getElementById('status');
+const connStatus = document.getElementById('connStatus');
+const queueInfo = document.getElementById('queueInfo');
+const posInfo = document.getElementById('posInfo');
+const itemsInfo = document.getElementById('itemsInfo');
+const resultsTable = document.getElementById('resultsTable');
+const tableViewport = document.getElementById('tableViewport');
+const tableCard = document.getElementById('resultsCard');
+const themeToggle = document.getElementById('themeToggle');
 
-    function updateUrlCount(){
-      const raw = urlsInput.value.trim();
-      const count = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length : 0;
-      urlCount.innerText = count;
+function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
+
+function updateUrlCount(){
+  const raw = urlsInput.value.trim();
+  const count = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length : 0;
+  urlCount.innerText = count;
+}
+urlsInput.addEventListener('input', updateUrlCount);
+
+function setStatus(t){ statusEl.innerText = t; }
+function setConn(t){ connStatus.innerText = t; }
+
+/* THEME */
+(function initTheme(){
+  const saved = localStorage.getItem('extractor_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+themeToggle.addEventListener('click', ()=>{
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('extractor_theme', next);
+});
+
+/* SOCKET + submit logic */
+let socket = null;
+function connectSocket(){
+  const backend = safeBackend();
+  console.log('Socket connecting to', backend);
+  setConn('Connecting…');
+  try {
+    socket = io(backend, { transports:['websocket','polling'], path:'/socket.io', timeout:10000 });
+  } catch(e){
+    console.error('Socket init error', e);
+    setConn('Socket init error');
+    return;
+  }
+  socket.on('connect', ()=>{ setConn('Connected'); setStatus('Ready'); console.log('Socket connected', socket.id); });
+  socket.on('connect_error', (err)=>{ console.warn('connect_error', err); setConn('Socket error'); setStatus('Socket connect error — see console'); });
+  socket.on('queue_update', payload => {
+    setStatus(payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
+    queueInfo.innerText = payload.total || 0;
+    posInfo.innerText = payload.position || '-';
+  });
+
+  socket.on('extraction_complete', async data => {
+    const rel = data.downloadUrl || '';
+    if(!rel){ setStatus('Extraction complete (no downloadUrl)'); return; }
+    const full = rel.startsWith('http') ? rel : (safeBackend() + rel);
+    downloadBtn.href = full; downloadBtn.style.display = 'inline-block';
+    setStatus('Extraction complete — fetching preview...');
+    itemsInfo.innerText = data.totalItems || '-';
+    try {
+      const res = await fetch(full);
+      if(!res.ok) throw new Error('CSV fetch failed '+res.status);
+      const txt = await res.text();
+      renderTableFromCsv(txt);
+      setStatus('Preview ready — click Download to save');
+    } catch(err){
+      console.error('CSV fetch failed', err);
+      setStatus('Extraction complete — click Download to save file');
     }
-    urlsInput.addEventListener('input', updateUrlCount);
+  });
+  socket.on('error', e => { console.error('socket error', e); setConn('Socket error'); });
+}
+connectSocket();
 
-    // Safe backend
-    function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
+async function submitToQueue(){
+  if(!socket || socket.disconnected){ alert('Socket not connected. Start ngrok & server.'); return; }
+  const raw = urlsInput.value.trim();
+  if(!raw){ alert('Paste one or more URLs.'); return; }
+  const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  setStatus('Submitting...');
+  try {
+    const res = await fetch(safeBackend() + '/queue_submit', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ site:'macys', urls })
+    });
+    if(!res.ok){ const t = await res.text(); throw new Error(t || 'Server error'); }
+    const json = await res.json();
+    setStatus(json.message || 'Submitted — waiting in queue');
+    const userId = json.userId || json.id || json.room;
+    if(userId) socket.emit('join_queue', userId);
+  } catch(err){
+    console.error('Submit failed', err);
+    alert('Submit failed: ' + (err.message || err));
+    setStatus('Submit failed');
+  }
+}
+submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
+clearBtn.addEventListener('click', ()=> { urlsInput.value=''; updateUrlCount(); resultsTable.innerHTML=''; tableViewport.style.display='none'; downloadBtn.style.display='none'; });
 
-    // Socket connection (robust)
-    let socket = null;
-    function connectSocket(){
-      const backend = safeBackend();
-      console.log('Connecting socket to', backend);
-      connStatus.innerText = 'Connecting…';
-      connSmall.innerText = '…';
-      try {
-        socket = io(backend, { transports:['websocket','polling'], path: '/socket.io', timeout: 10000 });
-      } catch(e){
-        console.error('Socket init error', e);
-        connStatus.innerText = 'Socket init error';
-        connSmall.innerText = 'Socket init error';
-        return;
-      }
-
-      socket.on('connect', () => {
-        connStatus.innerText = 'Connected';
-        connSmall.innerText = 'Connected';
-        statusEl.innerText = 'Ready';
-        console.log('Socket connected', socket.id);
-      });
-
-      socket.on('connect_error', (err) => {
-        console.warn('Socket connect_error', err);
-        connStatus.innerText = 'Socket error';
-        connSmall.innerText = 'Socket error';
-        statusEl.innerText = 'Socket connect error — check console';
-      });
-
-      socket.on('queue_update', payload => {
-        statusEl.innerText = payload.message || `Position ${payload.position || '?'} / ${payload.total || '?'}`;
-        queueInfo.innerText = payload.total || 0;
-        posInfo.innerText = payload.position || '-';
-      });
-
-      socket.on('extraction_complete', async data => {
-        const rel = data.downloadUrl || '';
-        const full = rel.startsWith('http') ? rel : (safeBackend() + rel);
-        downloadBtn.href = full;
-        downloadBtn.style.display = 'inline-block';
-        statusEl.innerText = 'Extraction complete — fetching preview...';
-        itemsInfo.innerText = data.totalItems || '-';
-        try {
-          const res = await fetch(full);
-          if (!res.ok) throw new Error('CSV fetch failed '+res.status);
-          const text = await res.text();
-          renderTableFromCsv(text);
-          statusEl.innerText = 'Preview ready — click Download to save';
-        } catch (err) {
-          console.error('CSV fetch error', err);
-          statusEl.innerText = 'Extraction complete — click Download to save CSV';
-        }
-      });
-
-      socket.on('error', e => {
-        console.error('socket error', e);
-        connStatus.innerText = 'Socket error';
-        connSmall.innerText = 'Socket error';
-      });
+/* CSV parser & render (keeps table inside viewport) */
+function csvToRows(csv){
+  const lines = csv.split(/\r?\n/).filter(l => l.trim() !== '');
+  return lines.map(l => {
+    const cells = []; let cur=''; let inQ=false;
+    for(let i=0;i<l.length;i++){
+      const ch = l[i];
+      if(ch === '"'){ if(inQ && l[i+1] === '"'){ cur += '"'; i++; continue; } inQ = !inQ; continue; }
+      if(ch === ',' && !inQ){ cells.push(cur); cur=''; continue; }
+      cur += ch;
     }
+    cells.push(cur);
+    return cells;
+  });
+}
 
-    // CSV parser (handles quoted fields)
-    function csvToRows(csv){
-      const lines = csv.split(/\r?\n/).filter(l=>l.trim()!=='');
-      return lines.map(l=>{
-        const cells = []; let cur=''; let inQ=false;
-        for (let i=0;i<l.length;i++){
-          const ch = l[i];
-          if (ch === '"'){ if (inQ && l[i+1] === '"'){ cur += '"'; i++; continue; } inQ = !inQ; continue; }
-          if (ch === ',' && !inQ){ cells.push(cur); cur=''; continue; }
-          cur += ch;
-        }
-        cells.push(cur);
-        return cells;
-      });
-    }
+function renderTableFromCsv(csv){
+  const rows = csvToRows(csv);
+  if(!rows || rows.length === 0){ resultsTable.innerHTML=''; tableViewport.style.display='none'; return; }
+  tableViewport.style.display='block';
+  const header = rows[0];
+  const thead = document.createElement('thead');
+  const thRow = document.createElement('tr');
+  header.forEach(h => { const th = document.createElement('th'); th.innerText = h.replace(/^"|"$/g,''); thRow.appendChild(th); });
+  thead.appendChild(thRow);
 
-    // Render table inside viewport (no page scroll)
-    function renderTableFromCsv(csv){
-      const rows = csvToRows(csv);
-      if (!rows || rows.length === 0) { resultsTable.innerHTML = ''; tableViewport.style.display = 'none'; return; }
-      tableViewport.style.display = 'block';
+  const tbody = document.createElement('tbody');
+  rows.slice(1,2000).forEach(r => {
+    const tr = document.createElement('tr');
+    r.forEach(cell => {
+      const td = document.createElement('td');
+      td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
 
-      const header = rows[0];
-      const thead = document.createElement('thead');
-      const hr = document.createElement('tr');
-      header.forEach(h => {
-        const th = document.createElement('th');
-        th.innerText = h.replace(/^"|"$/g,'');
-        hr.appendChild(th);
-      });
-      thead.appendChild(hr);
+  resultsTable.innerHTML = '';
+  resultsTable.appendChild(thead);
+  resultsTable.appendChild(tbody);
 
-      const tbody = document.createElement('tbody');
-      rows.slice(1, 2000).forEach(r => {
-        const tr = document.createElement('tr');
-        r.forEach(cell => {
-          const td = document.createElement('td');
-          td.innerText = (cell||'').replace(/^'|^"|"$/g,'');
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
+  // ensure internal scroll, not page
+  tableViewport.scrollTop = 0;
+  tableViewport.scrollLeft = 0;
+}
 
-      resultsTable.innerHTML = '';
-      resultsTable.appendChild(thead);
-      resultsTable.appendChild(tbody);
-
-      // ensure scroll inside viewport (not page)
-      tableViewport.scrollTop = 0;
-      tableViewport.scrollLeft = 0;
-    }
-
-    // Submit
-    async function submitToQueue(){
-      if (!socket || socket.disconnected) { alert('Socket not connected. Start ngrok & server.'); return; }
-      const raw = urlsInput.value.trim();
-      if (!raw) { alert('Paste one or more URLs.'); return; }
-      const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      statusEl.innerText = 'Submitting...';
-      try {
-        const res = await fetch(safeBackend() + '/queue_submit', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ site: 'macys', urls })
-        });
-        if (!res.ok) { const t = await res.text(); throw new Error(t || 'Server error'); }
-        const json = await res.json();
-        statusEl.innerText = json.message || 'Submitted — waiting in queue';
-        const userId = json.userId || json.id || json.room;
-        if (userId) socket.emit('join_queue', userId);
-      } catch (err) {
-        console.error('Submit failed', err);
-        alert('Submit failed: ' + (err.message || err));
-        statusEl.innerText = 'Submit failed';
-      }
-    }
-
-    // events
-    submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
-    clearBtn.addEventListener('click', () => { urlsInput.value = ''; updateUrlCount(); resultsTable.innerHTML=''; tableViewport.style.display='none'; downloadBtn.style.display='none'; });
-    urlsInput.addEventListener('input', updateUrlCount);
-
-    // init
-    updateUrlCount();
-    connectSocket();
-
-    // expose for debugging
-    window.__EXTRACTOR = { connectSocket, submitToQueue, renderTableFromCsv };
-  </script>
+/* expose for debugging */
+window.__EXTRACTOR = { connectSocket, submitToQueue, renderTableFromCsv };
+</script>
 </body>
 </html>

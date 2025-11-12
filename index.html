@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Extractor — UI refinements + Progress</title>
+<title>Extractor — UI refinements + Site auto-detect</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
   :root{
@@ -27,7 +27,7 @@
     --input-bg:rgba(255,255,255,0.01);
     --btn-text:#fff;
     --header-shadow: rgba(0,0,0,0.6);
-    --header-bg: #07111a; /* Fully opaque dark theme header background */
+    --header-bg: #07111a;
   }
   :root[data-theme="light"]{
     --page-bg:#f3f7fb;
@@ -37,7 +37,7 @@
     --input-bg:#ffffff;
     --btn-text:#fff;
     --header-shadow: rgba(0,0,0,0.06);
-    --header-bg: #ffffff; /* Fully opaque light theme header background */
+    --header-bg: #ffffff;
   }
 
   html,body{height:100%;margin:0;overflow-x:hidden;background:var(--page-bg);color:var(--text);-webkit-font-smoothing:antialiased}
@@ -75,10 +75,10 @@
   table{width:100%;border-collapse:collapse;min-width:1100px;table-layout:auto}
   thead th{
     position:sticky; top:0; z-index:6;
-    background: var(--header-bg); /* Fully opaque background - different per theme */
+    background: var(--header-bg);
     padding:12px 14px; color:var(--muted); font-size:12px; text-transform:uppercase;
     border-bottom:1px solid rgba(0,0,0,0.06);
-    font-weight:700; /* Bold header text */
+    font-weight:700;
     box-shadow: 0 2px 6px var(--header-shadow);
   }
   tbody td{padding:12px 14px;border-bottom:1px dashed rgba(0,0,0,0.04);font-size:14px;color:var(--text)}
@@ -89,7 +89,6 @@
   .col-sr{width:60px;white-space:nowrap}
   .col-sku{width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .col-upc{width:140px;white-space:nowrap}
-  /* URL column: truncated display with max-width */
   .col-url{max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1ea7ff}
   .col-color{width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .col-size{width:90px;white-space:nowrap}
@@ -133,6 +132,9 @@
   }
   :root[data-theme="light"] .url-counter { background: rgba(0,0,0,0.04); color:var(--muted); }
 
+  /* site chip */
+  .site-chip { font-weight:800; padding:8px 12px; border-radius:10px; background:rgba(0,0,0,0.04); color:var(--muted); }
+
   /* Circular progress box */
   .progress-wrap { display:flex; align-items:center; gap:12px; margin-left:12px; }
   .circle {
@@ -145,7 +147,6 @@
   .circle .percent { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text); font-size:14px; pointer-events:none; }
   .progress-label { font-size:13px; color:var(--muted); }
 
-  /* make small on narrow screens */
   @media(max-width:700px){
     .circle{ width:58px; height:58px; }
     .circle .percent { font-size:12px; }
@@ -158,7 +159,7 @@
       <div class="logo">EX</div>
       <div>
         <h1>Product Extractor</h1>
-        <p class="lead">Paste Macy's product links — extraction runs on your laptop. Full preview below; table scrolls inside the box.</p>
+        <p class="lead">Paste product links — extraction runs on your laptop. Full preview below; table scrolls inside the box.</p>
       </div>
 
       <div style="margin-left:auto">
@@ -180,7 +181,6 @@
         <a id="downloadBtn" class="btn btn-download" style="display:none" download>Download CSV</a>
         <button id="clearBtn" class="btn btn-ghost">Clear</button>
 
-        <!-- progress area: status + circle -->
         <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
           <div class="status" id="status">Not connected</div>
 
@@ -204,8 +204,10 @@
         <div class="chip" id="posInfo">Position: -</div>
         <div class="chip" id="itemsInfo">Items: -</div>
 
-        <!-- URL counter -->
+        <!-- Site chip shows detected site (auto updates) -->
         <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+          <div style="color:var(--muted);font-size:13px">Site:</div>
+          <div class="site-chip" id="siteChip">macys</div>
           <div style="color:var(--muted);font-size:13px">URLs:</div>
           <div class="url-counter" id="urlCount">0</div>
         </div>
@@ -243,18 +245,20 @@
   const rowsInfo = document.getElementById('rowsInfo');
   const themeSwitch = document.getElementById('themeSwitch');
   const urlCountEl = document.getElementById('urlCount');
+  const siteChip = document.getElementById('siteChip');
 
   // progress elements
   const progressWrap = document.getElementById('progressWrap');
   const progressBar = document.querySelector('.circle .bar');
   const progressText = document.getElementById('progressText');
   const progressLabel = document.getElementById('progressLabel');
-  const progressCircleEl = document.getElementById('progressCircle');
-
   const CIRCLE_R = 40;
-  const CIRCLE_CIRC = Math.PI * 2 * CIRCLE_R; // circumference
+  const CIRCLE_CIRC = Math.PI * 2 * CIRCLE_R;
   progressBar.style.strokeDasharray = CIRCLE_CIRC;
   progressBar.style.strokeDashoffset = CIRCLE_CIRC;
+
+  // tracked site (auto-detected) - default macys
+  let currentSite = 'macys';
 
   function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
   function setStatus(t){ statusEl.innerText = t; }
@@ -277,7 +281,37 @@
   themeSwitch.addEventListener('click', toggleTheme);
   themeSwitch.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTheme(); } });
 
-  // CSV parser
+  // Utility: detect site from single URL (simple heuristics by hostname)
+  function detectSiteFromUrl(url) {
+    try {
+      const u = new URL(url);
+      const host = u.hostname.toLowerCase();
+      if(host.includes('macys')) return 'macys';
+      if(host.includes('kohls')) return 'kohls';
+      if(host.includes('belk')) return 'belk';
+      // fallback: path or query heuristics
+      const p = u.pathname.toLowerCase();
+      if(p.includes('/shop/') || host.endsWith('.com')) return 'macys'; // safe fallback to macys if unknown
+      return 'macys';
+    } catch(e){ return 'macys'; }
+  }
+
+  // Update site chip and currentSite based on pasted URLs
+  function updateSiteFromUrls() {
+    const raw = urlsInput.value || '';
+    const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    if(urls.length === 0) {
+      currentSite = 'macys';
+      siteChip.innerText = currentSite;
+      return;
+    }
+    // pick first non-empty URL's detected site
+    const firstSite = detectSiteFromUrl(urls[0]);
+    currentSite = firstSite;
+    siteChip.innerText = currentSite;
+  }
+
+  // CSV parser (unchanged)
   function csvToRows(csv){
     const lines = csv.split(/\r?\n/).filter(l => l.trim() !== '');
     return lines.map(l => {
@@ -293,7 +327,7 @@
     });
   }
 
-  // Function to truncate URL for display
+  // truncate URL (unchanged)
   function truncateUrl(url, maxLength = 40) {
     if (!url || url.length <= maxLength) return url;
     try {
@@ -313,7 +347,7 @@
     }
   }
 
-  // render full CSV into table
+  // render table (unchanged)
   function renderTableFromCsv(csv){
     const rows = csvToRows(csv);
     if(!rows || rows.length === 0){ resultsArea.style.display='none'; resultsTable.innerHTML=''; rowsInfo.innerText='Showing: 0 rows'; return; }
@@ -351,8 +385,8 @@
           a.href = raw || '#';
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
-          a.innerText = truncateUrl(raw); // Use truncated URL for display
-          a.title = raw; // Full URL as tooltip
+          a.innerText = truncateUrl(raw);
+          a.title = raw;
           td.appendChild(a);
           td.className = 'col-url url-cell';
         } else {
@@ -385,74 +419,16 @@
     resultsArea.scrollLeft = 0;
   }
 
-  // === Progress animation (client-only, non-blocking) ===
+  // Progress helpers (unchanged)
   let progressInterval = null;
   let progressValue = 0;
-  let lastPct = 0; // <-- ensures visible percent never goes backward
+  function showProgressUI(show){ progressWrap.style.display = show ? 'flex' : 'none'; progressWrap.setAttribute('aria-hidden', show ? 'false' : 'true'); }
+  function setProgress(n){ if(n<0) n=0; if(n>100) n=100; progressValue=n; const offset=CIRCLE_CIRC*(1-(n/100)); progressBar.style.strokeDashoffset=offset; progressText.innerText=Math.round(n)+'%'; document.getElementById('progressCircle').setAttribute('aria-valuenow', String(Math.round(n))); }
+  function startProgressAuto(){ showProgressUI(true); setProgress(0); progressLabel.innerText='Extracting'; clearInterval(progressInterval); progressInterval=setInterval(()=>{ if(progressValue>=95){ clearInterval(progressInterval); return; } const step=0.5+Math.random()*(1.5*(1-progressValue/100)); setProgress(Math.min(95, progressValue+step)); },350); }
+  function completeProgress(){ clearInterval(progressInterval); setProgress(100); progressLabel.innerText='Complete'; setTimeout(()=> showProgressUI(false),1800); }
+  function resetProgress(){ clearInterval(progressInterval); setProgress(0); progressLabel.innerText='Idle'; showProgressUI(false); }
 
-  function showProgressUI(show){
-    progressWrap.style.display = show ? 'flex' : 'none';
-    progressWrap.setAttribute('aria-hidden', show ? 'false' : 'true');
-  }
-
-  function setProgress(n){
-    // n: 0-100 ; we clamp visible pct to never decrease
-    if (typeof n !== 'number' || isNaN(n)) n = 0;
-    if(n < 0) n = 0;
-    if(n > 100) n = 100;
-
-    // clamp so UI percent never goes backwards
-    const visible = Math.max(lastPct, Math.round(n));
-    lastPct = visible;
-
-    progressValue = visible;
-    const offset = CIRCLE_CIRC * (1 - (visible / 100));
-    // use fixed decimal to avoid tiny layout jitter
-    progressBar.style.strokeDashoffset = (Math.round(offset * 100) / 100);
-    progressText.innerText = `${visible}%`;
-    progressCircleEl.setAttribute('aria-valuenow', String(visible));
-  }
-
-  function startProgressAuto(){
-    // show UI and begin a gentle increment up to 95% (will be completed by extraction_complete)
-    showProgressUI(true);
-    // If lastPct is already advanced (server-driven), start from there; otherwise start at 0
-    if (lastPct === 0) setProgress(0);
-    progressLabel.innerText = 'Extracting';
-    clearInterval(progressInterval);
-    progressInterval = setInterval(()=> {
-      if(progressValue >= 95){
-        clearInterval(progressInterval);
-        return;
-      }
-      // variable step to feel natural; but ensure we never step below lastPct
-      const step = 0.5 + Math.random() * (1.5 * (1 - progressValue/100));
-      setProgress(Math.min(95, progressValue + step));
-    }, 350);
-  }
-
-  function completeProgress(){
-    clearInterval(progressInterval);
-    // finalize to 100 (monotonic)
-    setProgress(100);
-    progressLabel.innerText = 'Complete';
-    // keep visible briefly then hide
-    setTimeout(()=> showProgressUI(false), 1400);
-  }
-
-  function resetProgress(){
-    clearInterval(progressInterval);
-    lastPct = 0;
-    progressValue = 0;
-    // reset arc
-    progressBar.style.strokeDashoffset = CIRCLE_CIRC;
-    progressText.innerText = '0%';
-    progressLabel.innerText = 'Idle';
-    progressCircleEl.setAttribute('aria-valuenow', '0');
-    showProgressUI(false);
-  }
-
-  // socket + CSV behavior (unchanged API)
+  // socket + CSV behavior (unchanged except we listen for progress/extraction_complete)
   let socket = null;
   function connectSocket(){
     const backend = safeBackend();
@@ -464,39 +440,28 @@
     socket.on('connect', ()=> { setStatus('Ready'); console.log('socket connected', socket.id); });
     socket.on('connect_error', err => { console.warn('connect_error', err); setStatus('Socket error'); });
     socket.on('queue_update', payload => {
-      // if server uses message to tell extracting, start progress
       const msg = payload.message || '';
       setStatus(msg || `Position ${payload.position || '?'} / ${payload.total || '?'}`);
       queueInfo.innerText = `Queue: ${payload.total || 0}`;
       posInfo.innerText = `Position: ${payload.position || '-'}`;
-
-      // If server says extracting or your UI should, kick off progress
       const lower = (msg || '').toString().toLowerCase();
       if(lower.includes('extract') || lower.includes('extracting') || lower.includes('your turn - extracting')){
         startProgressAuto();
       }
     });
 
-    // server may emit per-item progress: { done, total }
     socket.on('progress', payload => {
       try {
         const done = Number(payload.done) || 0;
         const total = Number(payload.total) || 0;
         if (total > 0) {
-          const pct = Math.min(100, Math.round((done / total) * 100));
-          // update label and visible arc (monotonic via setProgress)
+          const pct = Math.min(100, (done / total) * 100);
           setProgress(pct);
           progressLabel.innerText = `${done} / ${total}`;
-          // ensure progress UI visible
-          showProgressUI(true);
-          // If server reports 100% done, finalize
-          if (pct >= 100) {
-            completeProgress();
-          }
+          // don't auto-hide until extraction_complete
         } else {
-          // total unknown: show counter and start gentle auto animation if not visible
           progressLabel.innerText = `${done} items`;
-          if (progressWrap.style.display === 'none') startProgressAuto();
+          startProgressAuto();
         }
       } catch (e) { console.warn('progress parse failed', e); }
     });
@@ -508,7 +473,7 @@
       setStatus('Extraction complete — fetching preview...');
       itemsInfo.innerText = `Items: ${data.totalItems || '-'}`;
 
-      // Complete progress immediately (monotonic)
+      // finalize progress
       completeProgress();
 
       try {
@@ -525,6 +490,7 @@
   }
   connectSocket();
 
+  // submit: sends detected site along with urls
   async function submitToQueue(){
     if(!socket || socket.disconnected){ alert('Socket not connected. Start ngrok & server.'); return; }
     const raw = urlsInput.value.trim();
@@ -532,10 +498,11 @@
     const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
     setStatus('Submitting...');
     try {
+      const payload = { site: currentSite, urls };
       const res = await fetch(safeBackend() + '/queue_submit', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ site:'macys', urls })
+        body: JSON.stringify(payload)
       });
       if(!res.ok){ const t = await res.text(); throw new Error(t || 'Server error'); }
       const json = await res.json();
@@ -543,7 +510,7 @@
       const userId = json.userId || json.id || json.room;
       if(userId) socket.emit('join_queue', userId);
 
-      // start client-side progress visualization while extraction runs
+      // start client-side progress visualization
       startProgressAuto();
     } catch(err){
       console.error('Submit error', err);
@@ -552,23 +519,34 @@
     }
   }
 
-  // URL counter update logic
-  function updateUrlCount(){
+  // URL counter + site detection update logic
+  function updateUrlCountAndSite(){
     const raw = urlsInput.value || '';
-    const count = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length;
+    const urls = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const count = urls.length;
     urlCountEl.textContent = count;
+    // detect site from the first URL if present
+    if(urls.length > 0) {
+      const detected = detectSiteFromUrl(urls[0]);
+      currentSite = detected;
+      siteChip.innerText = detected;
+    } else {
+      currentSite = 'macys';
+      siteChip.innerText = currentSite;
+    }
   }
-  urlsInput.addEventListener('input', updateUrlCount);
-  updateUrlCount();
+  urlsInput.addEventListener('input', updateUrlCountAndSite);
+  // also handle paste event (some browsers fire input after paste anyway)
+  urlsInput.addEventListener('paste', () => setTimeout(updateUrlCountAndSite, 50));
+  // init
+  updateUrlCountAndSite();
 
   // UI wiring
   submitBtn.addEventListener('click', e => { e.preventDefault(); submitToQueue(); });
   clearBtn.addEventListener('click', ()=> {
     urlsInput.value=''; resultsArea.style.display='none'; resultsTable.innerHTML=''; downloadBtn.style.display='none';
-    rowsInfo.innerText='Showing: 0 rows'; updateUrlCount(); resetProgress();
+    rowsInfo.innerText='Showing: 0 rows'; updateUrlCountAndSite(); resetProgress();
   });
-
-  function safeBackend(){ return (typeof BACKEND === 'string') ? BACKEND.trim() : BACKEND; }
 
   // expose for debug
   window.__EXTRACTOR = { renderTableFromCsv, submitToQueue, connectSocket, setProgress, startProgressAuto, completeProgress };

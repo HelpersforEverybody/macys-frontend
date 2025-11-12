@@ -460,6 +460,26 @@
         startProgressAuto();
       }
     });
+socket.on('progress', payload => {
+  try {
+    const done = Number(payload.done) || 0;
+    const total = Number(payload.total) || 0;
+    if (total > 0) {
+      const pct = Math.min(100, Math.round((done / total) * 100));
+      // setProgress is your UI function that updates the circular bar
+      setProgress(pct);                  // set the arc
+      progressLabel.innerText = `${done} / ${total}`; // text inside/near circle
+      if (pct >= 100) {
+        // optional: finalize UI
+        completeProgress();
+      }
+    } else {
+      // show simple counter if total unknown
+      progressLabel.innerText = `${done} items`;
+      startProgressAuto(); // optional fallback animation
+    }
+  } catch (e) { console.warn('progress parse failed', e); }
+});
 
     socket.on('extraction_complete', async data => {
       const rel = data.downloadUrl || '';
@@ -538,3 +558,4 @@
 </script>
 </body>
 </html>
+

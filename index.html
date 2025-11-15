@@ -288,105 +288,135 @@
   // Normalize header names to make mapping easier
   function normalizeHeader(h){ return String(h||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,' '); }
 
-  // render full CSV into table, but handle site-specific CSVs gracefully
-  function renderTableFromCsv(csv, siteHint = 'macys'){
-    try {
-      const rows = csvToRows(csv);
-      if(!rows || rows.length === 0){ resultsArea.style.display='none'; resultsTable.innerHTML=''; rowsInfo.innerText='Showing: 0 rows'; return; }
-      // Use first row as header if it seems like a header (contains letters)
-      let header = rows[0].map(c => c.replace(/^"|"$/g,''));
-      let dataRows = rows.slice(1);
-      // If first row looks like data not header (e.g., numeric first cell '1'), try to detect columns by siteHint
-      const firstCell = (header[0] || '').trim();
-      if (/^\d+$/.test(firstCell) && header.length > 1) {
-        // assume header is present; nothing to do
-      }
-
-      // If header columns are not the expected for a site, try to synthesize header for known site shapes
-      const headerLower = header.map(h=>normalizeHeader(h));
-      if (siteHint === 'kohls') {
-        // Kohl's expected header names (if CSV lacks header, detect by length)
-        const kohlsExpected = ['sr no','upc id','product','colour','size','size range','your price','sale price','regular price','stock available','availability','ship available','max allowed per order'];
-        if (headerLower.every(h => h === '' || /^\d+$/.test(h))) {
-          // weird: no header; create one based on expected columns if lengths match
-          if (dataRows[0] && dataRows[0].length === kohlsExpected.length) {
-            header = kohlsExpected;
-            dataRows = rows.slice(0); // treat all rows as data
-          }
-        }
-      }
-
-      // Build table
-      const thead = document.createElement('thead');
-      const trh = document.createElement('tr');
-      header.forEach(h => {
-        const th = document.createElement('th');
-        th.innerText = (h||'').toString().replace(/^"|"$/g,'');
-        const key = normalizeHeader(h);
-        if(key.includes('sr') || key.includes('no')) th.className = 'col-sr';
-        else if(key.includes('sku')) th.className = 'col-sku';
-        else if(key.includes('upc')) th.className = 'col-upc';
-        else if(key.includes('url')) th.className = 'col-url';
-        else if(key.includes('product') || key.includes('name')) th.className = 'col-sku';
-        else if(key.includes('colour') || key.includes('color')) th.className = 'col-color';
-        else if(key.includes('size range') || key.includes('size')) th.className = 'col-size';
-        else if(key.includes('your price') || key.includes('current') || key.includes('yourprice')) th.className = 'col-price';
-        else if(key.includes('regular')) th.className = 'col-regular';
-        else if(key.includes('avail') || key.includes('stock')) th.className = 'col-avail';
-        trh.appendChild(th);
-      });
-      thead.appendChild(trh);
-
-      const tbody = document.createElement('tbody');
-      dataRows.forEach(r => {
-        const tr = document.createElement('tr');
-        for (let idx=0; idx < header.length; idx++){
-          const td = document.createElement('td');
-          const raw = (r[idx]||'').replace(/^'|^"|"$/g,'');
-          const h = header[idx] ? normalizeHeader(header[idx]) : '';
-          // If there's a URL-like value, make it a link
-          if (/^https?:\/\//i.test(raw) || h.includes('url')) {
-            const a = document.createElement('a');
-            a.href = raw || '#';
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            a.innerText = truncateUrl(raw);
-            a.title = raw;
-            td.appendChild(a);
-            td.className = 'col-url url-cell';
-          } else {
-            td.innerText = raw;
-          }
-          // add classes similar to header mapping
-          if(h.includes('sr') || h.includes('no')) td.classList.add('col-sr');
-          if(h.includes('sku') || h.includes('product') || h.includes('name')) td.classList.add('col-sku');
-          if(h.includes('upc')) td.classList.add('col-upc');
-          if(h.includes('colour') || h.includes('color')) { td.classList.add('col-color'); td.title = raw; }
-          if(h.includes('size')) td.classList.add('col-size');
-          if(h.includes('your price') || h.includes('current') || h.includes('yourprice')) td.classList.add('col-price');
-          if(h.includes('regular')) td.classList.add('col-regular');
-          if(h.includes('avail') || h.includes('stock')) td.classList.add('col-avail');
-
-          tr.appendChild(td);
-        }
-        tbody.appendChild(tr);
-      });
-
-      resultsTable.innerHTML = '';
-      resultsTable.appendChild(thead);
-      resultsTable.appendChild(tbody);
-
-      resultsArea.style.display = 'block';
-      rowsInfo.innerText = `Showing: ${dataRows.length} rows`;
-      // Reset scroll so sticky header visually covers content
-      resultsArea.scrollTop = 0;
-      resultsArea.scrollLeft = 0;
-    } catch (e) {
-      console.error('renderTableFromCsv failed', e);
+  // Replace your existing renderTableFromCsv with this function
+function renderTableFromCsv(csv, siteHint = 'macys') {
+  try {
+    // parse CSV into rows (handles quoted commas and double-quotes)
+    const rows = csvToRows(csv);
+    if (!rows || rows.length === 0) {
       resultsArea.style.display = 'none';
-      rowsInfo.innerText = 'Preview unavailable';
+      resultsTable.innerHTML = '';
+      rowsInfo.innerText = 'Showing: 0 rows';
+      return;
     }
+
+    // basic helpers
+    const normalizeHeader = h => String(h || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+    const headerRow = rows[0].map(c => (c || '').toString().replace(/^"|"$/g, ''));
+    let dataRows = rows.slice(1);
+
+    // expected site column templates (useful when CSV lacks header row)
+    const expectedBySite = {
+      macys: ['sr no', 'sku', 'upc', 'url', 'color', 'size', 'current price', 'regular price', 'availability'],
+      kohls: ['sr no','upc id','product','colour','size','size range','your price','sale price','regular price','stock available','availability','ship available','max allowed per order'],
+      belk:  ['sr no','sku','upc','url','color','size','sale price','regular price','original price','availability']
+    };
+
+    // detect whether the first row is actually a header or real data
+    const firstCell = (headerRow[0] || '').trim();
+    const headerSeemsData = /^\d+$/.test(firstCell) || headerRow.every(c => c === '' || /^\d+$/.test(c));
+
+    let header = headerRow.slice(); // copy
+
+    // If header looks like data (or garbage), try to synthesize using expected template
+    if (headerSeemsData) {
+      const expected = expectedBySite[siteHint] || expectedBySite.macys;
+      if (dataRows[0] && dataRows[0].length === expected.length) {
+        header = expected.slice();
+        // dataRows stays as rows.slice(0) (we already removed headerRow above)
+        // but we want to include the current first row as data (we already have it in dataRows)
+      } else {
+        // Try a fuzzy heuristic: if the first data row length matches any expected, adopt it.
+        for (const key of Object.keys(expectedBySite)) {
+          const exp = expectedBySite[key];
+          if (dataRows[0] && dataRows[0].length === exp.length) {
+            header = exp.slice();
+            break;
+          }
+        }
+      }
+    } else {
+      // clean header strings (trim quotes)
+      header = header.map(h => (h || '').toString().replace(/^"|"$/g, '').trim());
+    }
+
+    // Final normalized header keys for mapping
+    const headerKeys = header.map(h => normalizeHeader(h));
+
+    // Build table head
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    header.forEach((h, idx) => {
+      const th = document.createElement('th');
+      th.innerText = (h || '').toString();
+      const key = headerKeys[idx] || '';
+      if (key.includes('sr') || key.includes('no')) th.className = 'col-sr';
+      else if (key.includes('sku') || key.includes('product') || key.includes('name')) th.className = 'col-sku';
+      else if (key.includes('upc')) th.className = 'col-upc';
+      else if (key.includes('url')) th.className = 'col-url';
+      else if (key.includes('colour') || key.includes('color')) th.className = 'col-color';
+      else if (key.includes('size')) th.className = 'col-size';
+      else if (key.includes('your price') || key.includes('current') || key.includes('yourprice') || key.includes('sale price')) th.className = 'col-price';
+      else if (key.includes('regular') || key.includes('original price')) th.className = 'col-regular';
+      else if (key.includes('avail') || key.includes('stock')) th.className = 'col-avail';
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+
+    // Build tbody
+    const tbody = document.createElement('tbody');
+    dataRows.forEach(row => {
+      const tr = document.createElement('tr');
+      for (let idx = 0; idx < header.length; idx++) {
+        const td = document.createElement('td');
+        const raw = (row[idx] || '').toString().replace(/^'|^"|"$/g, '');
+        const key = headerKeys[idx] || '';
+
+        // If value appears to be a URL, render as link
+        if (/^https?:\/\//i.test(raw) || key.includes('url')) {
+          const a = document.createElement('a');
+          a.href = raw || '#';
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.innerText = truncateUrl(raw || '');
+          a.title = raw || '';
+          td.appendChild(a);
+          td.className = 'col-url url-cell';
+        } else {
+          td.innerText = raw;
+        }
+
+        // replicate class mapping on TD
+        if (key.includes('sr') || key.includes('no')) td.classList.add('col-sr');
+        if (key.includes('sku') || key.includes('product') || key.includes('name')) td.classList.add('col-sku');
+        if (key.includes('upc')) td.classList.add('col-upc');
+        if (key.includes('colour') || key.includes('color')) { td.classList.add('col-color'); td.title = raw; }
+        if (key.includes('size')) td.classList.add('col-size');
+        if (key.includes('your price') || key.includes('current') || key.includes('yourprice') || key.includes('sale price')) td.classList.add('col-price');
+        if (key.includes('regular') || key.includes('original price')) td.classList.add('col-regular');
+        if (key.includes('avail') || key.includes('stock')) td.classList.add('col-avail');
+
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    });
+
+    // Attach to DOM
+    resultsTable.innerHTML = '';
+    resultsTable.appendChild(thead);
+    resultsTable.appendChild(tbody);
+
+    resultsArea.style.display = 'block';
+    rowsInfo.innerText = `Showing: ${dataRows.length} rows`;
+    resultsArea.scrollTop = 0;
+    resultsArea.scrollLeft = 0;
+  } catch (e) {
+    console.error('renderTableFromCsv failed', e);
+    resultsArea.style.display = 'none';
+    rowsInfo.innerText = 'Preview unavailable';
   }
+}
+
 
   // truncate URL (unchanged)
   function truncateUrl(url, maxLength = 40) {
@@ -547,3 +577,4 @@
 </script>
 </body>
 </html>
+
